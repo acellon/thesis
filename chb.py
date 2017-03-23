@@ -46,7 +46,7 @@ def summary(folder):
     f.closed
     return filelist
 
-def load_data(filelist, VERBOSE=False, EXTHD=False):
+def load_data(filelist, VERBOSE=False, EXTHD=True):
     # Save/load arrays with
     folder, _ = filelist[0].get('filename').split('_')
     if EXTHD:
@@ -57,7 +57,7 @@ def load_data(filelist, VERBOSE=False, EXTHD=False):
     savename = PATH + folder + '/' + folder + '.npz'
 
     if os.path.exists(savename):
-        print('Loading npz file...')
+        print('Loading:', savename)
         loaddict = np.load(savename)
         for eeg in filelist:
             eeg['rec'] = loaddict[eeg.get('filename')]
