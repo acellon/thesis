@@ -8,3 +8,5 @@ for file = edffiles'
     savename = savename{1};
     save(savename, 'hdr', 'rec');
 end
+
+clear edffiles file savename hdr rec;

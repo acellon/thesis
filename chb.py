@@ -14,7 +14,8 @@ PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 def summary(folder):
     # Locate summary textfile
     dirname = PATH + folder
-    filename = dirname + '/' + folder + '-summary.txt'
+    #filename = dirname + '/' + folder + '-summary.txt'
+    filename = dirname + '-summary.txt'
 
     # Create empty list of EEG files
     filelist = []
@@ -54,7 +55,7 @@ def load_data(filelist, VERBOSE=False, EXTHD=True):
     else:
         varpath = PATH
     dirname = varpath + folder + '/'
-    savename = PATH + folder + '/' + folder + '.npz'
+    savename =  dirname + folder + '.npz'
 
     if os.path.exists(savename):
         print('Loading:', savename)
