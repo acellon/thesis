@@ -11,6 +11,28 @@ import lasagne
 '''
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 
+class CHBfile:
+    def __init__(self, name):
+        self.name = name
+        self.num_szr = 0
+        self.start = []
+        self.end = []
+        self.rec = None
+        self.ict = None
+        self.preict = None
+
+    def __repr__(self):
+        return '%r' % (self.__dict__)
+
+    def pretty(self):
+        print('Name:              %s' % self.name)
+        print('Seizure Count:     %d' % self.num_szr)
+        for j in range(self.num_szr):
+            print('-Seizure %d range:  [%d - %d]' % (j + 1, self.start[j], self.end[j]))
+        print('EEG data:          (%d, %d) array' % self.rec.shape)
+        print('Ictal mask:        (%d, %d) array' % self.ict.shape)
+        print('Preictal mask:     (%d, %d) array' % self.preict.shape)
+
 def summary(folder):
     # Locate summary textfile
     dirname = PATH + folder
@@ -25,20 +47,20 @@ def summary(folder):
             fn = re.match(r"File Name: (\w+).edf", line)
             if fn:
                 # Add filename and skip two lines
-                newfile = {'filename': fn.group(1)}
+                newfile = CHBfile(fn.group(1))
                 f.readline(); f.readline();
 
                 # Add number of seizures
                 num_szr = re.match(r".*Seizures in File: (\d+)", f.readline())
-                newfile['num_szr'] = int(num_szr.group(1))
+                newfile.num_szr = int(num_szr.group(1))
 
                 # If file includes seizures, add start and end times
                     # note: assume max 1 seizure per file
-                if newfile.get('num_szr', 0) > 0:
-                    start = re.match(r".*Start Time: (\d+) s", f.readline())
-                    newfile['start'] = int(start.group(1))
-                    end = re.match(r".*End Time: (\d+) s", f.readline())
-                    newfile['end'] = int(end.group(1))
+                for i in range(newfile.num_szr):
+                    start = re.match(r".*Start Time: *(\d+) s", f.readline())
+                    newfile.start.append(int(start.group(1)) * 256)
+                    end = re.match(r".*End Time: *(\d+) s", f.readline())
+                    newfile.end.append(int(end.group(1)) * 256)
 
                 # Add file metadata to filelist
                 filelist.append(newfile)
@@ -49,7 +71,7 @@ def summary(folder):
 
 def load_data(filelist, VERBOSE=False, EXTHD=True):
     # Save/load arrays with
-    folder, _ = filelist[0].get('filename').split('_')
+    folder, _ = filelist[0].name.split('_')
     if EXTHD:
         varpath = '/Volumes/extHD/CHBMIT/'
     else:
@@ -61,7 +83,7 @@ def load_data(filelist, VERBOSE=False, EXTHD=True):
         print('Loading:', savename)
         loaddict = np.load(savename)
         for eeg in filelist:
-            eeg['rec'] = loaddict[eeg.get('filename')]
+            eeg.rec = loaddict[eeg.name]
         print('Done.')
         return filelist
     else:
@@ -71,10 +93,10 @@ def load_data(filelist, VERBOSE=False, EXTHD=True):
 
         for eeg in filelist:
             if VERBOSE:
-                print('Converting %s.mat to np array' % eeg.get('filename'))
+                print('Converting %s.mat to np array' % eeg.name)
 
-            eeg['rec'] = sio.loadmat(dirname + eeg.get('filename'))['rec']
-            savedict[eeg.get('filename')] = eeg.get('rec')
+            eeg.rec = sio.loadmat(dirname + eeg.name)['rec']
+            savedict[eeg.name] = eeg.rec
 
         if VERBOSE:
             print('Saving and compressing...')
@@ -85,8 +107,8 @@ def load_data(filelist, VERBOSE=False, EXTHD=True):
 
 def label(filelist, H=5):
     # Check to see if filelist contains rec data
-    if filelist[0].get('rec') is None:
-        print('No data has been loaded for this filelist. Please use load_data().')
+    if filelist[0].rec is None:
+        print('No data has been loaded for this filelist. Please use chb.load_data().')
         return filelist
 
     # Convert event horizon to sample size (minutes to 1/256 seconds)
@@ -94,18 +116,18 @@ def label(filelist, H=5):
     H = H * 60 * 256
     start, end = 0, 0
     for eegfile in filelist:
-        ict = np.zeros_like(eegfile['rec'])
+        ict = np.zeros_like(eegfile.rec)
         preict = np.copy(ict)
 
-        if eegfile['num_szr'] > 0:
-            start = eegfile['start'] * 256
-            end = eegfile['end'] * 256
+        for i in range(eegfile.num_szr):
+            start = eegfile.start[i]
+            end = eegfile.end[i]
             ict[:, start:end] = 1
             # print('ict indices: [',start,',',end,']',sep='')
             preict[:, (start - H):start] = 1
             # print('preict indices: [',start-H,',',start,']',sep='')
 
-        eegfile['ict'] = ict
-        eegfile['preict'] = preict
+        eegfile.ict = ict
+        eegfile.preict = preict
 
     return filelist

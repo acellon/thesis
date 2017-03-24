@@ -4,16 +4,16 @@ def load_data(filelist, VERBOSE=False):
     folder, _ = filelist[0].get('filename').split('_')
     dirname = PATH + folder + '/'
     for eegfile in filelist:
-            filename = dirname + eegfile.get('filename')
+            filename = dirname + eegfile.name
             pklname = filename + '.pkl'
             if os.path.exists(pklname):
                 if VERBOSE:
                     print('Loading: ' + pklname)
-                eegfile['rec'] = pickle.load(open(pklname, 'rb'))
+                eegfile.rec = pickle.load(open(pklname, 'rb'))
             else:
                 if VERBOSE:
                     print('Pickling: ' + pklname)
-                eegfile['rec'] = sio.loadmat(filename)['rec']
-                pickle.dump(eegfile['rec'], open(pklname, 'wb')) #, protocol=4
+                eegfile.rec = sio.loadmat(filename)['rec']
+                pickle.dump(eegfile.rec, open(pklname, 'wb')) #, protocol=4
 
     return filelist
