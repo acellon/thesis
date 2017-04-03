@@ -2,6 +2,8 @@ import numpy as np
 import scipy.io as sio
 import os
 import re
+import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 
 '''
 import theano
@@ -29,9 +31,58 @@ class CHBfile:
         print('Seizure Count:     %d' % self.num_szr)
         for j in range(self.num_szr):
             print('-Seizure %d range:  [%d - %d]' % (j + 1, self.start[j], self.end[j]))
-        print('EEG data:          (%d, %d) array' % self.rec.shape)
-        print('Ictal mask:        (%d, %d) array' % self.ict.shape)
-        print('Preictal mask:     (%d, %d) array' % self.preict.shape)
+        if self.rec is not None:
+            print('EEG data:          (%d, %d) array' % self.rec.shape)
+        if self.ict is not None:
+            print('Ictal mask:        (%d, %d) array' % self.ict.shape)
+        if self.preict is not None:
+            print('Preictal mask:     (%d, %d) array' % self.preict.shape)
+
+    '''
+    Function to plot all EEG channels for a given time period within a CHBfile
+    object. Modified from the Matplotlib example retrieved from: http://matplotlib.org/examples/pylab_examples/mri_with_eeg.html
+    '''
+    def plot(self,start=0,end=None):
+        if end is None:
+            end = self.rec.shape[1]
+        subrec = self.rec[:,start:end]
+        fig = plt.figure(figsize=(12,9))
+        ax = fig.add_subplot(111, title='%s plot' % self.name)
+        (numRows, numSamples) = subrec.shape
+        t = np.arange(start,end) / 256.0
+
+        # Set x size and ticks, y size - TODO: make dynamic
+        ticklocs = []
+        ax.set_xlim(int(start/256), int(end/256))
+        ax.set_xticks(np.arange(int(start/256),int(end/256)+1, 60))
+        dmin = subrec.min()
+        dmax = subrec.max()
+        dr = (dmax - dmin) * 0.7  # Crowd them a bit.
+        y0 = dmin
+        y1 = (numRows - 1) * dr + dmax
+        ax.set_ylim(y0, y1)
+
+        segs = []
+        for i in range(numRows):
+            segs.append(np.hstack((t[:, np.newaxis], subrec[i, :, np.newaxis])))
+            ticklocs.append(i * dr)
+
+        offsets = np.zeros((numRows, 2), dtype=float)
+        offsets[:, 1] = ticklocs
+
+        lines = LineCollection(segs, offsets=offsets, transOffset=None)
+        ax.add_collection(lines)
+
+        # Set the yticks to use axes coordinates on the y axis
+        ax.set_yticks(ticklocs)
+        ax.set_yticklabels(['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7',
+         'Ch8', 'Ch9', 'Ch10', 'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16',
+         'Ch17', 'Ch18', 'Ch19', 'Ch20', 'Ch21', 'Ch22', 'Ch23'])
+
+        ax.set_xlabel('Time (s)')
+
+        plt.tight_layout()
+        plt.show()
 
 def summary(folder):
     # Locate summary textfile
@@ -48,14 +99,13 @@ def summary(folder):
             if fn:
                 # Add filename and skip two lines
                 newfile = CHBfile(fn.group(1))
-                f.readline(); f.readline();
-
+                if not folder == 'chb24':
+                    f.readline(); f.readline();
                 # Add number of seizures
                 num_szr = re.match(r".*Seizures in File: (\d+)", f.readline())
                 newfile.num_szr = int(num_szr.group(1))
 
                 # If file includes seizures, add start and end times
-                    # note: assume max 1 seizure per file
                 for i in range(newfile.num_szr):
                     start = re.match(r".*Start Time: *(\d+) s", f.readline())
                     newfile.start.append(int(start.group(1)) * 256)
@@ -72,12 +122,12 @@ def summary(folder):
 def load_data(filelist, VERBOSE=False, EXTHD=True):
     # Save/load arrays with
     folder, _ = filelist[0].name.split('_')
+    if re.match(r"chb17.", folder):
+        folder = 'chb17'
     if EXTHD:
-        varpath = '/Volumes/extHD/CHBMIT/'
+        savename = '/Volumes/extHD/CHBMIT/' + folder + '/' + folder + '.npz'
     else:
-        varpath = PATH
-    dirname = varpath + folder + '/'
-    savename =  dirname + folder + '.npz'
+        savename = PATH + folder + '.npz'
 
     if os.path.exists(savename):
         print('Loading:', savename)
