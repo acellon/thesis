@@ -2,6 +2,7 @@ import numpy as np
 import scipy.io as sio
 import os
 import re
+#import random
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
@@ -12,6 +13,11 @@ import theano.tensor as T
 import lasagne
 '''
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
+
+# TODO: add electrodes to CHBfile object
+genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
+            'Ch10', 'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16', 'Ch17',
+            'Ch18', 'Ch19', 'Ch20', 'Ch21', 'Ch22', 'Ch23']
 
 class CHBfile:
     def __init__(self, name):
@@ -26,7 +32,7 @@ class CHBfile:
     def __repr__(self):
         return '%r' % (self.__dict__)
 
-    def pretty(self):
+    def info(self):
         print('Name:              %s' % self.name)
         print('Seizure Count:     %d' % self.num_szr)
         for j in range(self.num_szr):
@@ -42,42 +48,58 @@ class CHBfile:
     Function to plot all EEG channels for a given time period within a CHBfile
     object. Modified from the Matplotlib example retrieved from: http://matplotlib.org/examples/pylab_examples/mri_with_eeg.html
     '''
-    def plot(self,start=0,end=None):
+    def plot(self, start=0, end=None, chStart=1, chEnd=23, ticks=genticks):
+        # TODO: check input args, add error handling
         if end is None:
             end = self.rec.shape[1]
-        subrec = self.rec[:,start:end]
+        subrec = self.rec[(chStart - 1):chEnd,start:end]
+        (numRows, numSamples) = subrec.shape
+
         fig = plt.figure(figsize=(12,9))
         ax = fig.add_subplot(111, title='%s plot' % self.name)
-        (numRows, numSamples) = subrec.shape
         t = np.arange(start,end) / 256.0
 
-        # Set x size and ticks, y size - TODO: make dynamic
+        # Set x size and ticks, y size
         ticklocs = []
-        ax.set_xlim(int(start/256), int(end/256))
-        ax.set_xticks(np.arange(int(start/256),int(end/256)+1, 60))
-        dmin = subrec.min()
-        dmax = subrec.max()
-        dr = (dmax - dmin) * 0.7  # Crowd them a bit.
-        y0 = dmin
-        y1 = (numRows - 1) * dr + dmax
+        startsec = int(start/256)
+        endsec = int(end/256)
+        ticksec = endsec - startsec
+        if ticksec > 1000:
+            tickdiff = 180
+        elif ticksec > 500:
+            tickdiff = 30
+        elif ticksec > 100:
+            tickdiff = 10
+        elif ticksec > 30:
+            tickdiff = 5
+        else:
+            tickdiff = 1
+
+        ax.set_xlim(startsec, endsec)
+        ax.set_xticks(np.arange(startsec, endsec + 1, tickdiff))
+        tracemin = subrec.min()
+        tracemax = subrec.max()
+        traceheight = (tracemax - tracemin) * 0.7  # Crowd them a bit.
+        y0 = tracemin
+        y1 = (numRows - 1) * traceheight + tracemax
         ax.set_ylim(y0, y1)
 
-        segs = []
+        # Add traces for each channel
+        traces = []
         for i in range(numRows):
-            segs.append(np.hstack((t[:, np.newaxis], subrec[i, :, np.newaxis])))
-            ticklocs.append(i * dr)
+            traces.append(np.hstack((t[:, np.newaxis],
+                                     subrec[i, :, np.newaxis])))
+            ticklocs.append(i * traceheight)
 
         offsets = np.zeros((numRows, 2), dtype=float)
         offsets[:, 1] = ticklocs
 
-        lines = LineCollection(segs, offsets=offsets, transOffset=None)
+        lines = LineCollection(traces, offsets=offsets, transOffset=None)
         ax.add_collection(lines)
 
         # Set the yticks to use axes coordinates on the y axis
         ax.set_yticks(ticklocs)
-        ax.set_yticklabels(['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7',
-         'Ch8', 'Ch9', 'Ch10', 'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16',
-         'Ch17', 'Ch18', 'Ch19', 'Ch20', 'Ch21', 'Ch22', 'Ch23'])
+        ax.set_yticklabels(ticks[(chStart - 1):chEnd])
 
         ax.set_xlabel('Time (s)')
 
@@ -162,7 +184,7 @@ def label(filelist, H=5):
         return filelist
 
     # Convert event horizon to sample size (minutes to 1/256 seconds)
-        # need to decide what to do about event horizon going before start
+        # TODO: decide what to do about event horizon going before start
     H = H * 60 * 256
     start, end = 0, 0
     for eegfile in filelist:
@@ -173,11 +195,58 @@ def label(filelist, H=5):
             start = eegfile.start[i]
             end = eegfile.end[i]
             ict[:, start:end] = 1
-            # print('ict indices: [',start,',',end,']',sep='')
             preict[:, (start - H):start] = 1
-            # print('preict indices: [',start-H,',',start,']',sep='')
 
         eegfile.ict = ict
         eegfile.preict = preict
 
     return filelist
+
+def trainstream(filelist, numstream=10, streamlen=30):
+    streamlen = streamlen * 256
+
+    nonstreams = []
+    for n in range(numstream):
+        while True:
+            eeg = np.random.choice(filelist)
+            streamst = np.random.randint(0, eeg.rec.shape[1] - streamlen)
+            streamend = streamst + streamlen
+            #print('(%d,%d)' % (streamst, streamend))
+            if not (eeg.ict[:,streamst:streamend].any() or eeg.preict[:,streamst:streamend].any()):
+                break
+
+        stream = eeg.rec[:,streamst:streamend]
+        print(stream)
+        nonstreams.append(stream)
+
+    ictstreams = []
+    for n in range(numstream):
+        while True:
+            eeg = np.random.choice(filelist)
+            if eeg.num_szr == 0:
+                continue
+            ictstreamst = np.random.randint(0, eeg.rec.shape[1] - streamlen)
+            ictstreamend = ictstreamst + streamlen
+            #print('(%d,%d)' % (ictstreamst, ictstreamend))
+            if eeg.ict[:,ictstreamst:ictstreamend].all():
+                break
+
+        ictstream = eeg.rec[:,ictstreamst:ictstreamend]
+        print(ictstream)
+
+    pistreams = []
+    for eeg in filelist:
+        if eeg.num_szr > 0:
+            while True:
+                pistreamst = np.random.randint(0, eeg.rec.shape[1] - streamlen)
+                pistreamend = pistreamst + streamlen
+                #print('(%d,%d)' % (pistreamst, pistreamend))
+                if eeg.preict[:,pistreamst:pistreamend].all():
+                    break
+
+            pistream = eeg.rec[:,pistreamst:pistreamend]
+            print(pistream)
+
+    #return nonstreams, ictstreams, pistreams
+    # should return numpy arrays like mnist.py.....
+    # in format (examples, channels, data) I guess
