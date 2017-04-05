@@ -19,8 +19,8 @@ def main(subject=0, VERBOSE=False):
                     '.npz'))
                 else:
                     print('Loading %s' % subdirname)
-                    summary = chb.summary(subdirname)
-                    data = chb.load_data(summary,VERBOSE)
+                    filelist = chb.load_meta(subdirname)
+                    data = chb.load_data(filelist,VERBOSE)
 
 
 if __name__ == '__main__':

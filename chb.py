@@ -2,16 +2,9 @@ import numpy as np
 import scipy.io as sio
 import os
 import re
-#import random
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
-'''
-import theano
-import theano.tensor as T
-
-import lasagne
-'''
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 
 # TODO: add electrodes to CHBfile object
@@ -21,34 +14,37 @@ genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
 
 class CHBfile:
     def __init__(self, name):
-        self.name = name
+        self.name    = name
         self.num_szr = 0
-        self.start = []
-        self.end = []
-        self.rec = None
-        self.ict = None
-        self.preict = None
+        self.rec     = None
+        self.ict_idx = []
+        self.pre_idx = []
 
     def __repr__(self):
         return '%r' % (self.__dict__)
 
-    def info(self):
-        print('Name:              %s' % self.name)
-        print('Seizure Count:     %d' % self.num_szr)
-        for j in range(self.num_szr):
-            print('-Seizure %d range:  [%d - %d]' % (j + 1, self.start[j], self.end[j]))
-        if self.rec is not None:
-            print('EEG data:          (%d, %d) array' % self.rec.shape)
-        if self.ict is not None:
-            print('Ictal mask:        (%d, %d) array' % self.ict.shape)
-        if self.preict is not None:
-            print('Preictal mask:     (%d, %d) array' % self.preict.shape)
+    def add_szr(self, seizure, eventHorizon):
+        self.num_szr += 1
+        self.ict_idx.append(seizure)
+        prestart = seizure[0] - (eventHorizon * 256)
+        self.pre_idx.append((prestart, seizure[0]))
 
-    '''
-    Function to plot all EEG channels for a given time period within a CHBfile
-    object. Modified from the Matplotlib example retrieved from: http://matplotlib.org/examples/pylab_examples/mri_with_eeg.html
-    '''
+    def add_rec(self, rec):
+        self.rec = rec
+
+    def info(self):
+            print('Name:              %s' % self.name)
+            print('Seizure Count:     %d' % self.num_szr)
+            for j in range(self.num_szr):
+                print('-Seizure %d idx:    %s' % (j + 1, self.ict_idx[j]))
+            if self.rec is not None:
+                print('EEG data:          (%d, %d) array' % self.rec.shape)
+
     def plot(self, start=0, end=None, chStart=1, chEnd=23, ticks=genticks):
+        '''
+        Function to plot all EEG channels for a given time period within a CHBfile
+        object. Modified from the Matplotlib example retrieved from: http://matplotlib.org/examples/pylab_examples/mri_with_eeg.html
+        '''
         # TODO: check input args, add error handling
         if end is None:
             end = self.rec.shape[1]
@@ -106,7 +102,7 @@ class CHBfile:
         plt.tight_layout()
         plt.show()
 
-def summary(folder):
+def load_meta(folder, eventHorizon=5):
     # Locate summary textfile
     dirname = PATH + folder
     #filename = dirname + '/' + folder + '-summary.txt'
@@ -124,15 +120,14 @@ def summary(folder):
                 if not folder == 'chb24':
                     f.readline(); f.readline();
                 # Add number of seizures
-                num_szr = re.match(r".*Seizures in File: (\d+)", f.readline())
-                newfile.num_szr = int(num_szr.group(1))
-
-                # If file includes seizures, add start and end times
-                for i in range(newfile.num_szr):
+                num_szr = int(re.match(r".*Seizures in File: (\d+)",
+                                       f.readline()).group(1))
+                for i in range(num_szr):
                     start = re.match(r".*Start Time: *(\d+) s", f.readline())
-                    newfile.start.append(int(start.group(1)) * 256)
+                    start = int(start.group(1)) * 256
                     end = re.match(r".*End Time: *(\d+) s", f.readline())
-                    newfile.end.append(int(end.group(1)) * 256)
+                    end = int(end.group(1)) * 256
+                    newfile.add_szr((start, end), eventHorizon)
 
                 # Add file metadata to filelist
                 filelist.append(newfile)
@@ -155,7 +150,7 @@ def load_data(filelist, VERBOSE=False, EXTHD=True):
         print('Loading:', savename)
         loaddict = np.load(savename)
         for eeg in filelist:
-            eeg.rec = loaddict[eeg.name]
+            eeg.add_rec(loaddict[eeg.name])
         print('Done.')
         return filelist
     else:
@@ -167,7 +162,7 @@ def load_data(filelist, VERBOSE=False, EXTHD=True):
             if VERBOSE:
                 print('Converting %s.mat to np array' % eeg.name)
 
-            eeg.rec = sio.loadmat(dirname + eeg.name)['rec']
+            eeg.add_rec(sio.loadmat(dirname + eeg.name)['rec'])
             savedict[eeg.name] = eeg.rec
 
         if VERBOSE:
@@ -177,76 +172,61 @@ def load_data(filelist, VERBOSE=False, EXTHD=True):
 
     return filelist
 
-def label(filelist, H=5):
-    # Check to see if filelist contains rec data
-    if filelist[0].rec is None:
-        print('No data has been loaded for this filelist. Please use chb.load_data().')
-        return filelist
-
-    # Convert event horizon to sample size (minutes to 1/256 seconds)
-        # TODO: decide what to do about event horizon going before start
-    H = H * 60 * 256
-    start, end = 0, 0
-    for eegfile in filelist:
-        ict = np.zeros_like(eegfile.rec)
-        preict = np.copy(ict)
-
-        for i in range(eegfile.num_szr):
-            start = eegfile.start[i]
-            end = eegfile.end[i]
-            ict[:, start:end] = 1
-            preict[:, (start - H):start] = 1
-
-        eegfile.ict = ict
-        eegfile.preict = preict
-
-    return filelist
-
 def trainstream(filelist, numstream=10, streamlen=30):
     streamlen = streamlen * 256
 
-    nonstreams = []
+    norms = []
     for n in range(numstream):
         while True:
             eeg = np.random.choice(filelist)
-            streamst = np.random.randint(0, eeg.rec.shape[1] - streamlen)
-            streamend = streamst + streamlen
+            norm_start = np.random.randint(0, eeg.rec.shape[1] - streamlen)
+            norm_end = norm_start + streamlen
             #print('(%d,%d)' % (streamst, streamend))
-            if not (eeg.ict[:,streamst:streamend].any() or eeg.preict[:,streamst:streamend].any()):
+            if not ((eeg.pre_idx[0] <= norm_start <= eeg.ict_idx[1]) or (eeg.pre_idx[0] <= norm_end <= eeg.ict_idx[1])):
                 break
 
-        stream = eeg.rec[:,streamst:streamend]
-        print(stream)
-        nonstreams.append(stream)
+        norm = eeg.rec[:,norm_start:norm_end]
+        print(norm)
+        norms.append(norm)
 
-    ictstreams = []
+    icts = []
     for n in range(numstream):
         while True:
             eeg = np.random.choice(filelist)
             if eeg.num_szr == 0:
                 continue
-            ictstreamst = np.random.randint(0, eeg.rec.shape[1] - streamlen)
-            ictstreamend = ictstreamst + streamlen
+            ict_start = np.random.randint(0, eeg.rec.shape[1] - streamlen)
+            ict_end = ict_start + streamlen
             #print('(%d,%d)' % (ictstreamst, ictstreamend))
-            if eeg.ict[:,ictstreamst:ictstreamend].all():
+            if (eeg.ict_idx[0] <= ict_start) and (ict_end <= eeg.ict_idx[1]):
                 break
 
-        ictstream = eeg.rec[:,ictstreamst:ictstreamend]
-        print(ictstream)
+        ict = eeg.rec[:,ict_start:ict_end]
+        print(ict)
+        icts.append(ict)
 
-    pistreams = []
+    preicts = []
     for eeg in filelist:
         if eeg.num_szr > 0:
             while True:
-                pistreamst = np.random.randint(0, eeg.rec.shape[1] - streamlen)
-                pistreamend = pistreamst + streamlen
+                pre_start = np.random.randint(0, eeg.rec.shape[1] - streamlen)
+                pre_end = pre_start + streamlen
                 #print('(%d,%d)' % (pistreamst, pistreamend))
-                if eeg.preict[:,pistreamst:pistreamend].all():
+                if (eeg.pre_idx[0] <= pre_start) and (pre_end <= eeg.pre_idx[1]):
                     break
 
-            pistream = eeg.rec[:,pistreamst:pistreamend]
-            print(pistream)
+            preict = eeg.rec[:,pre_start:pre_end]
+            print(pre)
+            preicts.append(preict)
 
-    #return nonstreams, ictstreams, pistreams
-    # should return numpy arrays like mnist.py.....
-    # in format (examples, channels, data) I guess
+    normarray = np.zeros(len(norms), 23, streamlen)
+    for j in range(normarray.shape[0]):
+        normarray[j,:,:] = norms[j]
+    ictarray = np.zeros(len(icts), 23, streamlen)
+    for j in range(ictarray.shape[0]):
+        ictarray[j,:,:] = icts[j]
+    prearray = np.zeros(len(preicts), 23, streamlen)
+    for j in range(prearray.shape[0]):
+        prearray[j,:,:] = preicts[j]
+
+    return normarray, ictarray, prearray
