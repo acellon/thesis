@@ -1,5 +1,5 @@
 ################################################################################
-# File:      chbmit.py
+# File:      chb.py
 # Project:   Thesis
 # Author:    Adam Cellon
 #
@@ -16,14 +16,15 @@ from matplotlib.collections import LineCollection
 
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 
-# TODO: add electrodes to CHBfile object
 genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
             'Ch10', 'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16', 'Ch17',
             'Ch18', 'Ch19', 'Ch20', 'Ch21', 'Ch22', 'Ch23']
 
-################################################################################
-# CHB-MIT EEG record datatype.
-################################################################################
+#################################### TO-DOs ####################################
+# TODO: add electrodes to CHBfile object
+# TODO: leave-one-out testing
+
+############################ CHB-MIT record datatype ###########################
 class CHBfile:
     '''
     Dataype for EEG records from the CHB-MIT dataset, available via PhysioBank
@@ -205,9 +206,7 @@ class CHBfile:
         plt.tight_layout()
         plt.show()
 
-################################################################################
-# Functions for processing data.
-################################################################################
+######################### Functions for processing data ########################
 def load_meta(folder):
 #def load_meta(folder, eventHorizon=5):
     '''
@@ -361,4 +360,4 @@ def label_epochs(filelist, streamlen=1000):
     # Return as numpy arrays
     epochs = np.asarray(epochs)
     labels = np.asarray(labels)
-    return labels, epochs
+    return epochs, labels
