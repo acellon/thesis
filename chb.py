@@ -3,7 +3,7 @@
 # Project:   Thesis
 # Author:    Adam Cellon
 #
-# Data type for CHB-MIT EEG data files and associated functions for loading,
+# Data types for CHB-MIT EEG data files and associated functions for loading,
 # plotting, and labelling data.
 ################################################################################
 import numpy as np
@@ -84,6 +84,13 @@ class CHBfile:
         return self.rec
     def get_num(self):
         return len(self.ict_idx)
+
+    def is_ict(self, idx):
+        for start, stop in self.ict_idx:
+            start, stop = int(start/256), int(stop/256)
+            if (start <= idx <= stop):
+                return True
+        return False
 
     def get_labels(self, label_len=500):
         '''
@@ -206,158 +213,239 @@ class CHBfile:
         plt.tight_layout()
         plt.show()
 
-######################### Functions for processing data ########################
-def load_meta(folder):
-#def load_meta(folder, eventHorizon=5):
-    '''
-    Function to read/load metadata about list of EEG files from summary text
-    file. Metadata includes filename, number of seizures, and seizure indices.
+######################### CHB Subject data type ########################
+class CHBsubj(list):
 
-    Parameters
-    ----------
-    folder : string
-        Name of folder (in format chbXX) corresponding to CHB-MIT subject.
+    def __init__(self):
+        self.name = None
+        self.seizures = []
 
-    Returns
-    -------
-    filelist : list of CHBfile
-        All CHBfiles in folder (NB: files do not include CHBfile.rec data)
-    '''
-    # Locate summary textfile
-    dirname = PATH + folder
-    #filename = dirname + '/' + folder + '-summary.txt'
-    filename = dirname + '-summary.txt'
+    def add_file(self, CHBfile):
+        self.append(CHBfile)
+        for seizure in CHBfile.ict_idx:
+            self.seizures.append((CHBfile.get_name(), seizure))
 
-    # Create empty list of EEG files
-    filelist = []
-    with open(filename, 'r') as f:
-        for line in f:
-            # Find file metadata and create dict for each file
-            fn = re.match(r"File Name: (\w+).edf", line)
-            if fn:
-                # Add filename and skip two lines
-                newfile = CHBfile(fn.group(1))
-                if not folder == 'chb24':
-                    f.readline(); f.readline();
-                # Add number of seizures
-                num_szr = int(re.match(r".*Seizures in File: (\d+)",
-                                       f.readline()).group(1))
-                for i in range(num_szr):
-                    start = re.match(r".*Start Time: *(\d+) s", f.readline())
-                    start = int(start.group(1)) * 256
-                    end = re.match(r".*End Time: *(\d+) s", f.readline())
-                    end = int(end.group(1)) * 256
-                    newfile.add_szr((start, end))
-                    #newfile.add_szr((start, end), eventHorizon)
+    def get_file(self, filename):
+        for CHBfile in self:
+            if filename == CHBfile.get_name():
+                return CHBfile
 
-                # Add file metadata to filelist
-                filelist.append(newfile)
+    def get_num(self):
+        return len(self.seizures)
 
-    # Close summary file and return filelist
-    f.closed
-    return filelist
+    def get_seizures(self):
+        return self.seizures
 
-def load_data(filelist, verbose=False, exthd=True):
-    '''
-    Loads EEG records, either from compressed .npz file or by converting .mat
-    files.
+    def info(self):
+        seiz = self.get_seizures()
+        for i in range(self.get_num()):
+            print('   -Seizure %d: %s %s' % (i+1, seiz[i][0], seiz[i][1]))
+        sdur, tdur = 0, 0
+        for _, (start, stop) in seiz:
+            sdur += (stop - start)/256
+        for eeg in self:
+            tdur += (eeg.get_rec().shape[1])/256
+        sper = (sdur/tdur) * 100
 
-    Parameters
-    ----------
-    filelist : list of CHBfile
-        One subject's list of CHBfile objects
+        print('Subject: %s' % self[0].get_name().split('_')[0])
+        print(' Number of files:    %d' % len(self))
+        print(' Number of seizures: %d' % self.get_num())
+        print(' Total seizure duration: %d s (%f%%)' % (sdur, sper))
 
-    verbose : bool (default: False)
-        Controls how much output info is given.
+    def load_meta(self, folder):
+    #def load_meta(folder, eventHorizon=5):
+        '''
+        Function to read/load metadata about list of EEG files from summary text
+        file. Metadata includes filename, number of seizures, and seizure indices.
 
-    exthd : bool (default: True)
-        If True, data loaded from external HD. If False, data loaded from PATH.
+        Parameters
+        ----------
+        folder : string
+            Name of folder (in format chbXX) corresponding to CHB-MIT subject.
 
-    Returns
-    -------
-    filelist : list of CHBfile
-        All CHBfiles for single subject (now including rec data).
-    '''
-    timerstart = time.clock()
-    folder, _ = filelist[0].get_name().split('_')
-    if re.match(r"chb17.", folder):
-        folder = 'chb17'
-    if exthd:
-        savename = '/Volumes/extHD/CHBMIT/' + folder + '/' + folder + '.npz'
-    else:
-        savename = PATH + folder + '.npz'
+        Returns
+        -------
+        filelist : list of CHBfile
+            All CHBfiles in folder (NB: files do not include CHBfile.rec data)
+        '''
+        # Locate summary textfile
+        dirname = PATH + folder
+        #filename = dirname + '/' + folder + '-summary.txt'
+        filename = dirname + '-summary.txt'
 
-    if os.path.exists(savename):
-        print('Loading:', savename)
-        loaddict = np.load(savename)
-        for eeg in filelist:
-            eeg.add_rec(loaddict[eeg.get_name()])
-        print('Done: %f seconds elapsed.' % (time.clock() - timerstart))
-        return filelist
-    else:
-        savedict = {}
-        if not verbose:
-            print('Converting mat files to np arrays...')
+        # TODO: recomment this # Create empty list of EEG files
+        with open(filename, 'r') as f:
+            for line in f:
+                # Find file metadata and create dict for each file
+                fn = re.match(r"File Name: (\w+).edf", line)
+                if fn:
+                    # Add filename and skip two lines
+                    newfile = CHBfile(fn.group(1))
+                    if not folder == 'chb24':
+                        f.readline(); f.readline();
+                    # Add number of seizures
+                    num_szr = int(re.match(r".*Seizures in File: (\d+)",
+                                           f.readline()).group(1))
+                    for i in range(num_szr):
+                        start = re.match(r".*Start Time: *(\d+) s", f.readline())
+                        start = int(start.group(1)) * 256
+                        end = re.match(r".*End Time: *(\d+) s", f.readline())
+                        end = int(end.group(1)) * 256
+                        newfile.add_szr((start, end))
+                        #newfile.add_szr((start, end), eventHorizon)
 
-        for eeg in filelist:
+                    # Add file metadata to filelist
+                    self.add_file(newfile)
+
+        # Close summary file and return filelist
+        f.closed
+        return
+
+    def load_data(self, verbose=False, exthd=True):
+        '''
+        Loads EEG records, either from compressed .npz file or by converting .mat
+        files.
+
+        Parameters
+        ----------
+        filelist : list of CHBfile
+            One subject's list of CHBfile objects
+
+        verbose : bool (default: False)
+            Controls how much output info is given.
+
+        exthd : bool (default: True)
+            If True, data loaded from external HD. If False, data loaded from PATH.
+
+        Returns
+        -------
+        filelist : list of CHBfile
+            All CHBfiles for single subject (now including rec data).
+        '''
+        timerstart = time.clock()
+        folder, _ = self[0].get_name().split('_')
+        if re.match(r"chb17.", folder):
+            folder = 'chb17'
+        if exthd:
+            savename = '/Volumes/extHD/CHBMIT/' + folder + '/' + folder + '.npz'
+        else:
+            savename = PATH + folder + '.npz'
+
+        if os.path.exists(savename):
+            print('Loading:', savename)
+            loaddict = np.load(savename)
+            for eeg in self:
+                eeg.add_rec(loaddict[eeg.get_name()])
+            print('Done: %f seconds elapsed.' % (time.clock() - timerstart))
+            return
+        else:
+            savedict = {}
+            if not verbose:
+                print('Converting mat files to np arrays...')
+
+            for eeg in self:
+                if verbose:
+                    print('Converting %s.mat to np array' % eeg.get_name())
+
+                eeg.add_rec(sio.loadmat(dirname + eeg.get_name())['rec'])
+                savedict[eeg.get_name()] = eeg.get_rec()
+
             if verbose:
-                print('Converting %s.mat to np array' % eeg.get_name())
+                print('Saving and compressing...')
+            np.savez_compressed(savename, **savedict)
+            print('Done: %f seconds elapsed.' % (time.clock() - timerstart))
 
-            eeg.add_rec(sio.loadmat(dirname + eeg.get_name())['rec'])
-            savedict[eeg.get_name()] = eeg.get_rec()
+        return
 
-        if verbose:
-            print('Saving and compressing...')
-        np.savez_compressed(savename, **savedict)
-        print('Done: %f seconds elapsed.' % (time.clock() - timerstart))
+    def label_epochs(self, streamlen=1000):
+        '''
+        Converts EEG data for subject into non-overlapping 1-sec epochs labeled as
+        either ictal or non-seizure.
 
-    return filelist
+        Parameters
+        ----------
+        filelist : list of CHBfile
+            One subject's list of CHBfile objects.
 
-def label_epochs(filelist, streamlen=1000):
-    '''
-    Converts EEG data for subject into non-overlapping 1-sec epochs labeled as
-    either ictal or non-seizure.
+        streamlen : int (default: 1000)
+            Number of epochs to be returned. Controls number of non-seizure epochs
+            that are randomly eliminated.
 
-    Parameters
-    ----------
-    filelist : list of CHBfile
-        One subject's list of CHBfile objects.
+        Returns
+        -------
+        epochs : ndarray (streamlen, 23, 256), dtype=float
+            Numpy array of streamlen non-overlapping 1-sec epochs.
+        labels : ndarray (streamlen,), dtype=float
+            Numpy array of streamlen labels for corresponding epochs.
 
-    streamlen : int (default: 1000)
-        Number of epochs to be returned. Controls number of non-seizure epochs
-        that are randomly eliminated.
+        Notes
+        -----
+        - Epochs are NOT necessarily continuous (except within a seizure event).
+        - Operations are performed on lists, then returned as ndarrays to avoid
+          appending numpy arrays.
+        '''
+        labels = []
+        epochs = []
 
-    Returns
-    -------
-    epochs : ndarray (streamlen, 23, 256), dtype=float
-        Numpy array of streamlen non-overlapping 1-sec epochs.
-    labels : ndarray (streamlen,), dtype=float
-        Numpy array of streamlen labels for corresponding epochs.
+        # Move each epoch/label from list for file to total list for subject
+        for eeg in self:
+            epoch, label = eeg.get_labels()
+            for idx in range(len(label)):
+                epochs.append(epoch[idx])
+                labels.append(label[idx])
 
-    Notes
-    -----
-    - Epochs are NOT necessarily continuous (except within a seizure event).
-    - Operations are performed on lists, then returned as ndarrays to avoid
-      appending numpy arrays.
-    '''
-    labels = []
-    epochs = []
+        # Randomly remove non-seizure epochs
+        while (len(labels) > streamlen):
+            idx = np.random.randint(len(labels))
+            if not labels[idx]:
+                del epochs[idx]
+                del labels[idx]
 
-    # Move each epoch/label from list for file to total list for subject
-    for eeg in filelist:
-        epoch, label = eeg.get_labels()
-        for idx in range(len(label)):
-            epochs.append(epoch[idx])
-            labels.append(label[idx])
+        # Return as numpy arrays
+        epochs = np.asarray(epochs)
+        labels = np.asarray(labels)
+        return epochs, labels
 
-    # Randomly remove non-seizure epochs
-    while (len(labels) > streamlen):
-        idx = np.random.randint(len(labels))
-        if not labels[idx]:
-            del epochs[idx]
-            del labels[idx]
+    def leaveOneOut(self, testnum):
 
-    # Return as numpy arrays
-    epochs = np.asarray(epochs)
-    labels = np.asarray(labels)
-    return epochs, labels
+        loofile, (loostart, loostop) = self.get_seizures()[testnum - 1]
+        loostart, loostop = int(loostart/256), int(loostop/256)
+
+        trainlen = 1000
+        testlen = 100
+
+        # Create train, test, and label lists
+        train, trainlab, test, testlab = [], [], [], []
+        for eeg in self:
+            eeglen = int(eeg.get_rec().shape[1]/256)
+
+            if (loofile == eeg.get_name()):
+                for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
+                    if (loostart <= t <= loostop):
+                        test.append(epoch)
+                        testlab.append(1.)
+                    else:
+                        train.append(epoch)
+                        trainlab.append(float(eeg.is_ict(t)))
+
+            else:
+                for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
+                    train.append(epoch)
+                    trainlab.append(float(eeg.is_ict(t)))
+
+        while (len(train) > trainlen):
+            idx = np.random.randint(len(train))
+            if not trainlab[idx]:
+                if (len(test) < testlen):
+                    test.append(train.pop(idx))
+                    testlab.append(trainlab.pop(idx))
+                else:
+                    del train[idx]
+                    del trainlab[idx]
+
+        # Return as numpy arrays
+        train = np.asarray(train)
+        trainlab = np.asarray(trainlab)
+        test = np.asarray(test)
+        testlab = np.asarray(testlab)
+        return train, trainlab, test, testlab
