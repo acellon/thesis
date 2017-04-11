@@ -63,7 +63,7 @@ class CHBfile:
         Parameters
         ----------
         seizure : tuple
-            Indices in rec of seizure (start, stop)
+            Time indices of seizure in sec from start of file (start, stop)
         '''
         self.ict_idx.append(seizure)
         #prestart = seizure[0] - (eventHorizon * 256)
@@ -87,7 +87,6 @@ class CHBfile:
 
     def is_ict(self, idx):
         for start, stop in self.ict_idx:
-            start, stop = int(start/256), int(stop/256)
             if (start <= idx <= stop):
                 return True
         return False
@@ -113,7 +112,7 @@ class CHBfile:
         flen = int(self.get_rec().shape[1]/256)
         label = [0] * flen
         for start, stop in self.ict_idx:
-            for i in range(int(start/256),int(stop/256)):
+            for i in range(start, stop):
                 label[i] = 1
 
         # Create train list of EEG epochs
@@ -155,22 +154,23 @@ class CHBfile:
         chEnd : int (default: 23)
             Last channel to plot.
         '''
-        # TODO: check input args, add error handling
         rec = self.get_rec()
+        starthz = start * 256
         if end is None:
-            end = rec.shape[1]
-        subrec = rec[(chStart-1):chEnd,start:end]
+           endhz = rec.shape[1]
+           end = int(endhz/256)
+        else:
+           endhz = end * 256
+        subrec = rec[(chStart-1):chEnd,starthz:endhz]
         (numRows, numSamples) = subrec.shape
 
         fig = plt.figure(figsize=(12,9))
         ax = fig.add_subplot(111, title='%s plot' % self.get_name())
-        t = np.arange(start,end) / 256.0
+        t = np.arange(starthz, endhz) / 256.0
 
         # Set x size and ticks, y size
         ticklocs = []
-        startsec = int(start/256)
-        endsec = int(end/256)
-        ticksec = endsec - startsec
+        ticksec = end - start
         if ticksec > 1000:
             tickdiff = 180
         elif ticksec > 500:
@@ -182,8 +182,8 @@ class CHBfile:
         else:
             tickdiff = 1
 
-        ax.set_xlim(startsec, endsec)
-        ax.set_xticks(np.arange(startsec, endsec + 1, tickdiff))
+        ax.set_xlim(start, end)
+        ax.set_xticks(np.arange(start, end + 1, tickdiff))
         tracemin = subrec.min()
         tracemax = subrec.max()
         traceheight = (tracemax - tracemin) * 0.7  # Crowd them a bit.
@@ -242,7 +242,7 @@ class CHBsubj(list):
             print('   -Seizure %d: %s %s' % (i+1, seiz[i][0], seiz[i][1]))
         sdur, tdur = 0, 0
         for _, (start, stop) in seiz:
-            sdur += (stop - start)/256
+            sdur += (stop - start)
         for eeg in self:
             tdur += (eeg.get_rec().shape[1])/256
         sper = (sdur/tdur) * 100
@@ -288,9 +288,9 @@ class CHBsubj(list):
                                            f.readline()).group(1))
                     for i in range(num_szr):
                         start = re.match(r".*Start Time: *(\d+) s", f.readline())
-                        start = int(start.group(1)) * 256
+                        start = int(start.group(1))
                         end = re.match(r".*End Time: *(\d+) s", f.readline())
-                        end = int(end.group(1)) * 256
+                        end = int(end.group(1))
                         newfile.add_szr((start, end))
                         #newfile.add_szr((start, end), eventHorizon)
 
@@ -406,13 +406,9 @@ class CHBsubj(list):
         labels = np.asarray(labels)
         return epochs, labels
 
-    def leaveOneOut(self, testnum):
+    def leaveOneOut(self, testnum, trainlen=1000, testlen=100):
 
         loofile, (loostart, loostop) = self.get_seizures()[testnum - 1]
-        loostart, loostop = int(loostart/256), int(loostop/256)
-
-        trainlen = 1000
-        testlen = 100
 
         # Create train, test, and label lists
         train, trainlab, test, testlab = [], [], [], []
