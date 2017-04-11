@@ -21,23 +21,24 @@ import lasagne
 # ################## Download and prepare the CHBMIT dataset ##################
 # Loads data for a certain subject (taken as a string 'chbXX').
 
-def load_dataset(subject):
+def load_dataset(subjname):
+    # TODO: organize this differently - this should just load the subject and
+    #       data, so that we can loop through all the LOOs in main
     # Load data for subject
-    filelist = chb.load_data(chb.load_meta(subject), exthd=False)
+    subject = chb.CHBsubj()
+    subject.load_meta(subjname)
+    subject.load_data(exthd=False)
 
     # Load and read training and test set images and labels.
-    x_train, y_train = chb.label_epochs(filelist, streamlen=1000)
+    x_train, y_train, x_test, y_test = subject.leaveOneOut(1)
 
-    x_test = load_mnist_images('t10k-images-idx3-ubyte.gz')
-    y_test = load_mnist_labels('t10k-labels-idx1-ubyte.gz')
-
-    # We reserve the last 10000 training examples for validation.
-    X_train, X_val = X_train[:-10000], X_train[-10000:]
-    y_train, y_val = y_train[:-10000], y_train[-10000:]
+    # We reserve the last 100 training examples for validation.
+    x_train, x_val = x_train[:-100], x_train[-100:]
+    y_train, y_val = y_train[:-100], y_train[-100:]
 
     # We just return all the arrays in order, as expected in main().
     # (It doesn't matter how we do this as long as we can read them again.)
-    return X_train, y_train, X_val, y_val, X_test, y_test
+    return x_train, y_train, x_val, y_val, x_test, y_test
 
 
 # ##################### Build the neural network model #######################
@@ -51,35 +52,35 @@ def build_mlp(input_var=None):
     # data and 50% dropout to the hidden layers.
 
     # Input layer, specifying the expected input shape of the network
-    # (unspecified batchsize, 1 channel, 28 rows and 28 columns) and
+    # (unspecified batchsize, 23 channels, 256 samples) and
     # linking it to the given Theano variable `input_var`, if any:
-    l_in = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
+    l_in = lasagne.layers.InputLayer(shape=(None, 23, 256),
                                      input_var=input_var)
 
     # Apply 20% dropout to the input data:
-    l_in_drop = lasagne.layers.DropoutLayer(l_in, p=0.2)
+    #l_in_drop = lasagne.layers.DropoutLayer(l_in, p=0.2)
 
     # Add a fully-connected layer of 800 units, using the linear rectifier, and
     # initializing weights with Glorot's scheme (which is the default anyway):
     l_hid1 = lasagne.layers.DenseLayer(
-            l_in_drop, num_units=800,
+            l_hid1, num_units=800,
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.GlorotUniform())
 
     # We'll now add dropout of 50%:
-    l_hid1_drop = lasagne.layers.DropoutLayer(l_hid1, p=0.5)
+    #l_hid1_drop = lasagne.layers.DropoutLayer(l_hid1, p=0.5)
 
     # Another 800-unit layer:
     l_hid2 = lasagne.layers.DenseLayer(
-            l_hid1_drop, num_units=800,
+            l_hid1, num_units=800,
             nonlinearity=lasagne.nonlinearities.rectify)
 
     # 50% dropout again:
-    l_hid2_drop = lasagne.layers.DropoutLayer(l_hid2, p=0.5)
+    #l_hid2_drop = lasagne.layers.DropoutLayer(l_hid2, p=0.5)
 
     # Finally, we'll add the fully-connected output layer, of 10 softmax units:
     l_out = lasagne.layers.DenseLayer(
-            l_hid2_drop, num_units=10,
+            l_hid2, num_units=10,
             nonlinearity=lasagne.nonlinearities.softmax)
 
     # Each layer is linked to its incoming layer(s), so we only need to pass
@@ -120,7 +121,7 @@ def build_cnn(input_var=None):
     # and a fully-connected hidden layer in front of the output layer.
 
     # Input layer, as usual:
-    network = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
+    network = lasagne.layers.InputLayer(shape=(None, 23, 256),
                                         input_var=input_var)
     # This time we do not apply input dropout, as it tends to work less well
     # for convolutional layers.
@@ -128,7 +129,7 @@ def build_cnn(input_var=None):
     # Convolutional layer with 32 kernels of size 5x5. Strided and padded
     # convolutions are supported as well; see the docstring.
     network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(5, 5),
+            network, num_filters=32, filter_size=(1, 16),
             nonlinearity=lasagne.nonlinearities.rectify,
             W=lasagne.init.GlorotUniform())
     # Expert note: Lasagne provides alternative convolutional layers that
@@ -140,7 +141,7 @@ def build_cnn(input_var=None):
 
     # Another convolution with 32 5x5 kernels, and another 2x2 pooling:
     network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(5, 5),
+            network, num_filters=32, filter_size=(1, 16),
             nonlinearity=lasagne.nonlinearities.rectify)
     network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
 
@@ -189,10 +190,10 @@ def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
 # more functions to better separate the code, but it wouldn't make it any
 # easier to read.
 
-def main(model='mlp', num_epochs=500):
+def main(model='cnn', subject='chb01', num_epochs=50):
     # Load the dataset
     print("Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset()
+    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(subject)
 
     # Prepare Theano variables for inputs and targets
     input_var = T.tensor4('inputs')
@@ -252,7 +253,7 @@ def main(model='mlp', num_epochs=500):
         train_err = 0
         train_batches = 0
         start_time = time.time()
-        for batch in iterate_minibatches(X_train, y_train, 500, shuffle=True):
+        for batch in iterate_minibatches(X_train, y_train, 10, shuffle=True):
             inputs, targets = batch
             train_err += train_fn(inputs, targets)
             train_batches += 1
@@ -261,7 +262,7 @@ def main(model='mlp', num_epochs=500):
         val_err = 0
         val_acc = 0
         val_batches = 0
-        for batch in iterate_minibatches(X_val, y_val, 500, shuffle=False):
+        for batch in iterate_minibatches(X_val, y_val, 10, shuffle=False):
             inputs, targets = batch
             err, acc = val_fn(inputs, targets)
             val_err += err
@@ -303,7 +304,7 @@ def main(model='mlp', num_epochs=500):
 if __name__ == '__main__':
     if ('--help' in sys.argv) or ('-h' in sys.argv):
         print("Trains a neural network on MNIST using Lasagne.")
-        print("Usage: %s [MODEL [EPOCHS]]" % sys.argv[0])
+        print("Usage: %s [MODEL [SUBJECT [EPOCHS]]]" % sys.argv[0])
         print()
         print("MODEL: 'mlp' for a simple Multi-Layer Perceptron (MLP),")
         print("       'custom_mlp:DEPTH,WIDTH,DROP_IN,DROP_HID' for an MLP")
@@ -316,5 +317,7 @@ if __name__ == '__main__':
         if len(sys.argv) > 1:
             kwargs['model'] = sys.argv[1]
         if len(sys.argv) > 2:
-            kwargs['num_epochs'] = int(sys.argv[2])
+            kwargs['subject'] = sys.argv[2]
+        if len(sys.argv) > 3:
+            kwargs['num_epochs'] = int(sys.argv[3])
         main(**kwargs)

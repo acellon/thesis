@@ -24,6 +24,16 @@ genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
 # TODO: add electrodes to CHBfile object
 # TODO: leave-one-out testing
 
+def shuffle_in_unison(a, b):
+    '''
+    Retrieved from: http://stackoverflow.com/questions/4601373/better-way-to-shuffle-two-numpy-arrays-in-unison
+    '''
+    rng_state = np.random.get_state()
+    np.random.shuffle(a)
+    np.random.set_state(rng_state)
+    np.random.shuffle(b)
+    return None
+
 ############################ CHB-MIT record datatype ###########################
 class CHBfile:
     '''
@@ -402,8 +412,8 @@ class CHBsubj(list):
                 del labels[idx]
 
         # Return as numpy arrays
-        epochs = np.asarray(epochs)
-        labels = np.asarray(labels)
+        epochs = np.expand_dims(np.asarray(epochs),axis=1)
+        labels = np.asarray(labels, dtype='int32')
         return epochs, labels
 
     def leaveOneOut(self, testnum, trainlen=1000, testlen=100):
@@ -419,15 +429,15 @@ class CHBsubj(list):
                 for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
                     if (loostart <= t <= loostop):
                         test.append(epoch)
-                        testlab.append(1.)
+                        testlab.append(1)
                     else:
                         train.append(epoch)
-                        trainlab.append(float(eeg.is_ict(t)))
+                        trainlab.append(int(eeg.is_ict(t)))
 
             else:
                 for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
                     train.append(epoch)
-                    trainlab.append(float(eeg.is_ict(t)))
+                    trainlab.append(int(eeg.is_ict(t)))
 
         while (len(train) > trainlen):
             idx = np.random.randint(len(train))
@@ -439,9 +449,12 @@ class CHBsubj(list):
                     del train[idx]
                     del trainlab[idx]
 
-        # Return as numpy arrays
-        train = np.asarray(train)
-        trainlab = np.asarray(trainlab)
-        test = np.asarray(test)
-        testlab = np.asarray(testlab)
+        # Return as co-shuffled numpy arrays
+        train = np.expand_dims(np.asarray(train),axis=1)
+        trainlab = np.asarray(trainlab, dtype='int32')
+        test = np.expand_dims(np.asarray(test),axis=1)
+        testlab = np.asarray(testlab, dtype='int32')
+
+        shuffle_in_unison(train, trainlab)
+        shuffle_in_unison(test, testlab)
         return train, trainlab, test, testlab
