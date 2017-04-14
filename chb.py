@@ -22,7 +22,6 @@ genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
 
 #################################### TO-DOs ####################################
 # TODO: add electrodes to CHBfile object
-# TODO: leave-one-out testing
 
 def shuffle_in_unison(a, b):
     '''
@@ -100,38 +99,6 @@ class CHBfile:
             if (start <= idx <= stop):
                 return True
         return False
-
-    def get_labels(self, label_len=500):
-        '''
-        Format and label raw EEG data into non-overlapping 1-sec epochs.
-
-        Returns
-        -------
-        train : list of ndarray len([...,(23, 256),...]) = 3600
-            List of 1-second epochs of EEG data
-
-        label : list of int
-            Labels of corresponding epochs in train; 0 = non-seizure, 1 = ictal
-
-        Notes
-        -----
-        Data is manipulated and returned in lists to avoid wasting memory on
-        np.append(), which does not append in-place.
-        '''
-        # Create label list
-        flen = int(self.get_rec().shape[1]/256)
-        label = [0] * flen
-        for start, stop in self.ict_idx:
-            for i in range(start, stop):
-                label[i] = 1
-
-        # Create train list of EEG epochs
-        train = []
-        for epoch in np.split(self.get_rec(), flen, axis=1):
-            train.append(epoch)
-
-        # Return epochs in lists
-        return train, label
 
     def info(self):
         '''
@@ -223,7 +190,7 @@ class CHBfile:
         plt.tight_layout()
         plt.show()
 
-######################### CHB Subject data type ########################
+############################ CHB Subject data type #############################
 class CHBsubj(list):
 
     def __init__(self):
@@ -263,7 +230,6 @@ class CHBsubj(list):
         print(' Total seizure duration: %d s (%f%%)' % (sdur, sper))
 
     def load_meta(self, folder):
-    #def load_meta(folder, eventHorizon=5):
         '''
         Function to read/load metadata about list of EEG files from summary text
         file. Metadata includes filename, number of seizures, and seizure indices.
@@ -367,94 +333,128 @@ class CHBsubj(list):
 
         return
 
-    def label_epochs(self, streamlen=1000):
-        '''
-        Converts EEG data for subject into non-overlapping 1-sec epochs labeled as
-        either ictal or non-seizure.
+############################# Labeling functions ###############################
 
-        Parameters
-        ----------
-        filelist : list of CHBfile
-            One subject's list of CHBfile objects.
+def get_labels(eeg, label_len=500):
+    '''
+    Format and label raw EEG data into non-overlapping 1-sec epochs.
 
-        streamlen : int (default: 1000)
-            Number of epochs to be returned. Controls number of non-seizure epochs
-            that are randomly eliminated.
+    Returns
+    -------
+    train : list of ndarray len([...,(23, 256),...]) = 3600
+        List of 1-second epochs of EEG data
 
-        Returns
-        -------
-        epochs : ndarray (streamlen, 23, 256), dtype=float
-            Numpy array of streamlen non-overlapping 1-sec epochs.
-        labels : ndarray (streamlen,), dtype=float
-            Numpy array of streamlen labels for corresponding epochs.
+    label : list of int
+        Labels of corresponding epochs in train; 0 = non-seizure, 1 = ictal
 
-        Notes
-        -----
-        - Epochs are NOT necessarily continuous (except within a seizure event).
-        - Operations are performed on lists, then returned as ndarrays to avoid
-          appending numpy arrays.
-        '''
-        labels = []
-        epochs = []
+    Notes
+    -----
+    Data is manipulated and returned in lists to avoid wasting memory on
+    np.append(), which does not append in-place.
+    '''
+    # Create label list
+    flen = int(eeg.get_rec().shape[1]/256)
+    label = [0] * flen
+    for start, stop in eeg.ict_idx:
+        for i in range(start, stop):
+            label[i] = 1
 
-        # Move each epoch/label from list for file to total list for subject
-        for eeg in self:
-            epoch, label = eeg.get_labels()
-            for idx in range(len(label)):
-                epochs.append(epoch[idx])
-                labels.append(label[idx])
+    # Create train list of EEG epochs
+    train = []
+    for epoch in np.split(eeg.get_rec(), flen, axis=1):
+        train.append(epoch)
 
-        # Randomly remove non-seizure epochs
-        while (len(labels) > streamlen):
-            idx = np.random.randint(len(labels))
-            if not labels[idx]:
-                del epochs[idx]
-                del labels[idx]
+    # Return epochs in lists
+    return train, label
 
-        # Return as numpy arrays
-        epochs = np.expand_dims(np.asarray(epochs),axis=1)
-        labels = np.asarray(labels, dtype='int32')
-        return epochs, labels
+def label_epochs(subj, streamlen=1000):
+    '''
+    Converts EEG data for subject into non-overlapping 1-sec epochs labeled as
+    either ictal or non-seizure.
 
-    def leaveOneOut(self, testnum, trainlen=1000, testlen=100):
+    Parameters
+    ----------
+    filelist : list of CHBfile
+        One subject's list of CHBfile objects.
 
-        loofile, (loostart, loostop) = self.get_seizures()[testnum - 1]
+    streamlen : int (default: 1000)
+        Number of epochs to be returned. Controls number of non-seizure epochs
+        that are randomly eliminated.
 
-        # Create train, test, and label lists
-        train, trainlab, test, testlab = [], [], [], []
-        for eeg in self:
-            eeglen = int(eeg.get_rec().shape[1]/256)
+    Returns
+    -------
+    epochs : ndarray (streamlen, 23, 256), dtype=float
+        Numpy array of streamlen non-overlapping 1-sec epochs.
+    labels : ndarray (streamlen,), dtype=float
+        Numpy array of streamlen labels for corresponding epochs.
 
-            if (loofile == eeg.get_name()):
-                for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
-                    if (loostart <= t <= loostop):
-                        test.append(epoch)
-                        testlab.append(1)
-                    else:
-                        train.append(epoch)
-                        trainlab.append(int(eeg.is_ict(t)))
+    Notes
+    -----
+    - Epochs are NOT necessarily continuous (except within a seizure event).
+    - Operations are performed on lists, then returned as ndarrays to avoid
+      appending numpy arrays.
+    '''
+    labels = []
+    epochs = []
 
-            else:
-                for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
+    # Move each epoch/label from list for file to total list for subject
+    for eeg in subj:
+        epoch, label = eeg.get_labels()
+        for idx in range(len(label)):
+            epochs.append(epoch[idx])
+            labels.append(label[idx])
+
+    # Randomly remove non-seizure epochs
+    while (len(labels) > streamlen):
+        idx = np.random.randint(len(labels))
+        if not labels[idx]:
+            del epochs[idx]
+            del labels[idx]
+
+    # Return as numpy arrays
+    epochs = np.expand_dims(np.asarray(epochs),axis=1)
+    labels = np.asarray(labels, dtype='int32')
+    return epochs, labels
+
+def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
+
+    loofile, (loostart, loostop) = subj.get_seizures()[testnum - 1]
+
+    # Create train, test, and label lists
+    train, trainlab, test, testlab = [], [], [], []
+    for eeg in subj:
+        eeglen = int(eeg.get_rec().shape[1]/256)
+
+        if (loofile == eeg.get_name()):
+            for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
+                if (loostart <= t <= loostop):
+                    test.append(epoch)
+                    testlab.append(1)
+                else:
                     train.append(epoch)
                     trainlab.append(int(eeg.is_ict(t)))
 
-        while (len(train) > trainlen):
-            idx = np.random.randint(len(train))
-            if not trainlab[idx]:
-                if (len(test) < testlen):
-                    test.append(train.pop(idx))
-                    testlab.append(trainlab.pop(idx))
-                else:
-                    del train[idx]
-                    del trainlab[idx]
+        else:
+            for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
+                train.append(epoch)
+                trainlab.append(int(eeg.is_ict(t)))
 
-        # Return as co-shuffled numpy arrays
-        train = np.expand_dims(np.asarray(train),axis=1)
-        trainlab = np.asarray(trainlab, dtype='int32')
-        test = np.expand_dims(np.asarray(test),axis=1)
-        testlab = np.asarray(testlab, dtype='int32')
+    while (len(train) > trainlen):
+        idx = np.random.randint(len(train))
+        if not trainlab[idx]:
+            if (len(test) < testlen):
+                test.append(train.pop(idx))
+                testlab.append(trainlab.pop(idx))
+            else:
+                del train[idx]
+                del trainlab[idx]
 
-        shuffle_in_unison(train, trainlab)
-        shuffle_in_unison(test, testlab)
-        return train, trainlab, test, testlab
+    # Return as co-shuffled numpy arrays
+    train = np.expand_dims(np.asarray(train),axis=1)
+    trainlab = np.asarray(trainlab, dtype='int32')
+    test = np.expand_dims(np.asarray(test),axis=1)
+    testlab = np.asarray(testlab, dtype='int32')
+
+    shuffle_in_unison(train, trainlab)
+    shuffle_in_unison(test, testlab)
+    return train, trainlab, test, testlab

@@ -10,314 +10,174 @@ import sys
 import os
 import time
 import chb
+import matplotlib.pyplot as plt
 
 import numpy as np
 import theano
 import theano.tensor as T
 
 import lasagne
-
+from lasagne import layers
+from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid
+from lasagne.objectives import binary_crossentropy
 
 # ################## Download and prepare the CHBMIT dataset ##################
 # Loads data for a certain subject (taken as a string 'chbXX').
 
 def load_dataset(subjname):
-    # TODO: organize this differently - this should just load the subject and
-    #       data, so that we can loop through all the LOOs in main
     # Load data for subject
     subject = chb.CHBsubj()
     subject.load_meta(subjname)
     subject.load_data(exthd=False)
-
-    # Load and read training and test set images and labels.
-    x_train, y_train, x_test, y_test = subject.leaveOneOut(1)
-
-    # We reserve the last 100 training examples for validation.
-    x_train, x_val = x_train[:-100], x_train[-100:]
-    y_train, y_val = y_train[:-100], y_train[-100:]
-
-    # We just return all the arrays in order, as expected in main().
-    # (It doesn't matter how we do this as long as we can read them again.)
-    return x_train, y_train, x_val, y_val, x_test, y_test
+    return subject
 
 
 # ##################### Build the neural network model #######################
-# This script supports three types of models. For each one, we define a
-# function that takes a Theano variable representing the input and returns
-# the output layer of a neural network model built in Lasagne.
+def scratch_net(input_var, data_size=(None,1,23,256), output_size=1):
 
-def build_mlp(input_var=None):
-    # This creates an MLP of two hidden layers of 800 units each, followed by
-    # a softmax output layer of 10 units. It applies 20% dropout to the input
-    # data and 50% dropout to the hidden layers.
+    net = {}
+    net['data']  = layers.InputLayer(data_size, input_var=input_var)
+    net['conv1'] = layers.Conv2DLayer(net['data'],  num_filters=4, filter_size=(1,7), pad='same', nonlinearity=rectify)
+    net['conv2'] = layers.Conv2DLayer(net['conv1'], num_filters=8, filter_size=(1,15), pad='same',
+                                      stride=(1,2), nonlinearity=rectify)
+    net['pool']  = layers.MaxPool2DLayer(net['conv2'], pool_size=(1,2))
+    net['fcl']   = layers.DenseLayer(net['pool'], num_units=256, nonlinearity=rectify)
+    net['out']   = layers.DenseLayer(net['fcl'], num_units=output_size, nonlinearity=sigmoid)
 
-    # Input layer, specifying the expected input shape of the network
-    # (unspecified batchsize, 23 channels, 256 samples) and
-    # linking it to the given Theano variable `input_var`, if any:
-    l_in = lasagne.layers.InputLayer(shape=(None, 23, 256),
-                                     input_var=input_var)
+    return net
 
-    # Apply 20% dropout to the input data:
-    #l_in_drop = lasagne.layers.DropoutLayer(l_in, p=0.2)
+def scratch_model(input_var, target_var, net):
 
-    # Add a fully-connected layer of 800 units, using the linear rectifier, and
-    # initializing weights with Glorot's scheme (which is the default anyway):
-    l_hid1 = lasagne.layers.DenseLayer(
-            l_hid1, num_units=800,
-            nonlinearity=lasagne.nonlinearities.rectify,
-            W=lasagne.init.GlorotUniform())
+    prediction = layers.get_output(net['out'])
+    loss = binary_crossentropy(prediction, target_var)
+    loss = lasagne.objectives.aggregate(loss)
 
-    # We'll now add dropout of 50%:
-    #l_hid1_drop = lasagne.layers.DropoutLayer(l_hid1, p=0.5)
+    params = layers.get_all_params(net['out'], trainable=True)
+    updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
 
-    # Another 800-unit layer:
-    l_hid2 = lasagne.layers.DenseLayer(
-            l_hid1, num_units=800,
-            nonlinearity=lasagne.nonlinearities.rectify)
+    test_prediction = layers.get_output(net['out'], deterministic=True)
 
-    # 50% dropout again:
-    #l_hid2_drop = lasagne.layers.DropoutLayer(l_hid2, p=0.5)
+    test_loss = binary_crossentropy(test_prediction, target_var)
+    test_loss = lasagne.objectives.aggregate(test_loss)
+    test_acc  = T.mean(lasagne.objectives.binary_accuracy(test_prediction, target_var),dtype=theano.config.floatX)
 
-    # Finally, we'll add the fully-connected output layer, of 10 softmax units:
-    l_out = lasagne.layers.DenseLayer(
-            l_hid2, num_units=10,
-            nonlinearity=lasagne.nonlinearities.softmax)
-
-    # Each layer is linked to its incoming layer(s), so we only need to pass
-    # the output layer to give access to a network in Lasagne:
-    return l_out
-
-
-def build_custom_mlp(input_var=None, depth=2, width=800, drop_input=.2,
-                     drop_hidden=.5):
-    # By default, this creates the same network as `build_mlp`, but it can be
-    # customized with respect to the number and size of hidden layers. This
-    # mostly showcases how creating a network in Python code can be a lot more
-    # flexible than a configuration file. Note that to make the code easier,
-    # all the layers are just called `network` -- there is no need to give them
-    # different names if all we return is the last one we created anyway; we
-    # just used different names above for clarity.
-
-    # Input layer and dropout (with shortcut `dropout` for `DropoutLayer`):
-    network = lasagne.layers.InputLayer(shape=(None, 1, 28, 28),
-                                        input_var=input_var)
-    if drop_input:
-        network = lasagne.layers.dropout(network, p=drop_input)
-    # Hidden layers and dropout:
-    nonlin = lasagne.nonlinearities.rectify
-    for _ in range(depth):
-        network = lasagne.layers.DenseLayer(
-                network, width, nonlinearity=nonlin)
-        if drop_hidden:
-            network = lasagne.layers.dropout(network, p=drop_hidden)
-    # Output layer:
-    softmax = lasagne.nonlinearities.softmax
-    network = lasagne.layers.DenseLayer(network, 10, nonlinearity=softmax)
-    return network
-
-
-def build_cnn(input_var=None):
-    # As a third model, we'll create a CNN of two convolution + pooling stages
-    # and a fully-connected hidden layer in front of the output layer.
-
-    # Input layer, as usual:
-    network = lasagne.layers.InputLayer(shape=(None, 23, 256),
-                                        input_var=input_var)
-    # This time we do not apply input dropout, as it tends to work less well
-    # for convolutional layers.
-
-    # Convolutional layer with 32 kernels of size 5x5. Strided and padded
-    # convolutions are supported as well; see the docstring.
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(1, 16),
-            nonlinearity=lasagne.nonlinearities.rectify,
-            W=lasagne.init.GlorotUniform())
-    # Expert note: Lasagne provides alternative convolutional layers that
-    # override Theano's choice of which implementation to use; for details
-    # please see http://lasagne.readthedocs.org/en/latest/user/tutorial.html.
-
-    # Max-pooling layer of factor 2 in both dimensions:
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
-
-    # Another convolution with 32 5x5 kernels, and another 2x2 pooling:
-    network = lasagne.layers.Conv2DLayer(
-            network, num_filters=32, filter_size=(1, 16),
-            nonlinearity=lasagne.nonlinearities.rectify)
-    network = lasagne.layers.MaxPool2DLayer(network, pool_size=(2, 2))
-
-    # A fully-connected layer of 256 units with 50% dropout on its inputs:
-    network = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(network, p=.5),
-            num_units=256,
-            nonlinearity=lasagne.nonlinearities.rectify)
-
-    # And, finally, the 10-unit output layer with 50% dropout on its inputs:
-    network = lasagne.layers.DenseLayer(
-            lasagne.layers.dropout(network, p=.5),
-            num_units=10,
-            nonlinearity=lasagne.nonlinearities.softmax)
-
-    return network
-
-
-# ############################# Batch iterator ###############################
-# This is just a simple helper function iterating over training data in
-# mini-batches of a particular size, optionally in random order. It assumes
-# data is available as numpy arrays. For big datasets, you could load numpy
-# arrays as memory-mapped files (np.load(..., mmap_mode='r')), or write your
-# own custom data iteration function. For small datasets, you can also copy
-# them to GPU at once for slightly improved performance. This would involve
-# several changes in the main program, though, and is not demonstrated here.
-# Notice that this function returns only mini-batches of size `batchsize`.
-# If the size of the data is not a multiple of `batchsize`, it will not
-# return the last (remaining) mini-batch.
-
-def iterate_minibatches(inputs, targets, batchsize, shuffle=False):
-    assert len(inputs) == len(targets)
-    if shuffle:
-        indices = np.arange(len(inputs))
-        np.random.shuffle(indices)
-    for start_idx in range(0, len(inputs) - batchsize + 1, batchsize):
-        if shuffle:
-            excerpt = indices[start_idx:start_idx + batchsize]
-        else:
-            excerpt = slice(start_idx, start_idx + batchsize)
-        yield inputs[excerpt], targets[excerpt]
-
-
-# ############################## Main program ################################
-# Everything else will be handled in our main program now. We could pull out
-# more functions to better separate the code, but it wouldn't make it any
-# easier to read.
-
-def main(model='cnn', subject='chb01', num_epochs=50):
-    # Load the dataset
-    print("Loading data...")
-    X_train, y_train, X_val, y_val, X_test, y_test = load_dataset(subject)
-
-    # Prepare Theano variables for inputs and targets
-    input_var = T.tensor4('inputs')
-    target_var = T.ivector('targets')
-
-    # Create neural network model (depending on first command line parameter)
-    print("Building model and compiling functions...")
-    if model == 'mlp':
-        network = build_mlp(input_var)
-    elif model.startswith('custom_mlp:'):
-        depth, width, drop_in, drop_hid = model.split(':', 1)[1].split(',')
-        network = build_custom_mlp(input_var, int(depth), int(width),
-                                   float(drop_in), float(drop_hid))
-    elif model == 'cnn':
-        network = build_cnn(input_var)
-    else:
-        print("Unrecognized model type %r." % model)
-        return
-
-    # Create a loss expression for training, i.e., a scalar objective we want
-    # to minimize (for our multi-class problem, it is the cross-entropy loss):
-    prediction = lasagne.layers.get_output(network)
-    loss = lasagne.objectives.categorical_crossentropy(prediction, target_var)
-    loss = loss.mean()
-    # We could add some weight decay as well here, see lasagne.regularization.
-
-    # Create update expressions for training, i.e., how to modify the
-    # parameters at each training step. Here, we'll use Stochastic Gradient
-    # Descent (SGD) with Nesterov momentum, but Lasagne offers plenty more.
-    params = lasagne.layers.get_all_params(network, trainable=True)
-    updates = lasagne.updates.nesterov_momentum(
-            loss, params, learning_rate=0.01, momentum=0.9)
-
-    # Create a loss expression for validation/testing. The crucial difference
-    # here is that we do a deterministic forward pass through the network,
-    # disabling dropout layers.
-    test_prediction = lasagne.layers.get_output(network, deterministic=True)
-    test_loss = lasagne.objectives.categorical_crossentropy(test_prediction,
-                                                            target_var)
-    test_loss = test_loss.mean()
-    # As a bonus, also create an expression for the classification accuracy:
-    test_acc = T.mean(T.eq(T.argmax(test_prediction, axis=1), target_var),
-                      dtype=theano.config.floatX)
-
-    # Compile a function performing a training step on a mini-batch (by giving
-    # the updates dictionary) and returning the corresponding training loss:
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
+    val_fn   = theano.function([input_var, target_var], [test_loss, test_acc])
 
-    # Compile a second function computing the validation loss and accuracy:
-    val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
+    return train_fn, val_fn
 
-    # Finally, launch the training loop.
-    print("Starting training...")
-    # We iterate over epochs:
+def scratch_train(train_fn, val_fn, num_epochs):
+    train_err_list = []
+    val_err_list = []
+    val_acc_list = []
+
+    print('='*80)
+    print('| epoch \t| train loss\t| val loss\t| val acc\t| time\t|')
+    print('='*80)
+
     for epoch in range(num_epochs):
-        # In each epoch, we do a full pass over the training data:
-        train_err = 0
-        train_batches = 0
-        start_time = time.time()
-        for batch in iterate_minibatches(X_train, y_train, 10, shuffle=True):
+        st = time.time()
+        batch_train_errs = []
+        for batch in iterate_minibatches(x_train, y_train, batch_size):
             inputs, targets = batch
-            train_err += train_fn(inputs, targets)
-            train_batches += 1
+            err = train_fn(inputs, targets)
+            batch_train_errs.append(err)
+        epoch_train_err = np.mean(batch_train_errs)
+        train_err_list.append(epoch_train_err)
 
-        # And a full pass over the validation data:
-        val_err = 0
-        val_acc = 0
-        val_batches = 0
-        for batch in iterate_minibatches(X_val, y_val, 10, shuffle=False):
+        batch_val_errs = []
+        batch_val_accs = []
+        for batch in iterate_minibatches(x_val, y_val, batch_size):
             inputs, targets = batch
             err, acc = val_fn(inputs, targets)
-            val_err += err
-            val_acc += acc
-            val_batches += 1
+            batch_val_errs.append(err)
+            batch_val_accs.append(acc)
+        epoch_val_err = np.mean(batch_val_errs)
+        val_err_list.append(epoch_val_err)
+        epoch_val_acc = np.mean(batch_val_accs)
+        val_acc_list.append(epoch_val_acc)
 
-        # Then we print the results for this epoch:
-        print("Epoch {} of {} took {:.3f}s".format(
-            epoch + 1, num_epochs, time.time() - start_time))
-        print("  training loss:\t\t{:.6f}".format(train_err / train_batches))
-        print("  validation loss:\t\t{:.6f}".format(val_err / val_batches))
-        print("  validation accuracy:\t\t{:.2f} %".format(
-            val_acc / val_batches * 100))
+        en = time.time()
+        print('| %d \t\t| %.6f\t| %.6f\t| %.2f%%\t| %.2f s'
+              % (epoch+1, epoch_train_err, epoch_val_err, epoch_val_acc * 100, en-st))
+    print('-'*80)
+    return train_err_list, val_err_list, val_acc_list
 
-    # After training, we compute and print the test error:
-    test_err = 0
-    test_acc = 0
-    test_batches = 0
-    for batch in iterate_minibatches(X_test, y_test, 500, shuffle=False):
+def scratch_test(val_fn):
+    print('Test Results:')
+    print('='*80)
+
+    batch_err = []
+    batch_acc = []
+    for batch in iterate_minibatches(x_test, y_test, batch_size):
         inputs, targets = batch
         err, acc = val_fn(inputs, targets)
-        test_err += err
-        test_acc += acc
-        test_batches += 1
-    print("Final results:")
-    print("  test loss:\t\t\t{:.6f}".format(test_err / test_batches))
-    print("  test accuracy:\t\t{:.2f} %".format(
-        test_acc / test_batches * 100))
+        batch_err.append(err)
+        batch_acc.append(acc)
 
-    # Optionally, you could now dump the network weights to a file like this:
-    # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
-    #
-    # And load them again later on like this:
-    # with np.load('model.npz') as f:
-    #     param_values = [f['arr_%d' % i] for i in range(len(f.files))]
-    # lasagne.layers.set_all_param_values(network, param_values)
+    test_err = np.mean(batch_err)
+    test_acc = np.mean(batch_acc)
 
+    print('Test loss: %.6f' % test_err)
+    print('Test accuracy: %.2f' % (test_acc * 100))
+    print('-'*80)
+    return test_err, test_acc
 
-if __name__ == '__main__':
-    if ('--help' in sys.argv) or ('-h' in sys.argv):
-        print("Trains a neural network on MNIST using Lasagne.")
-        print("Usage: %s [MODEL [SUBJECT [EPOCHS]]]" % sys.argv[0])
-        print()
-        print("MODEL: 'mlp' for a simple Multi-Layer Perceptron (MLP),")
-        print("       'custom_mlp:DEPTH,WIDTH,DROP_IN,DROP_HID' for an MLP")
-        print("       with DEPTH hidden layers of WIDTH units, DROP_IN")
-        print("       input dropout and DROP_HID hidden dropout,")
-        print("       'cnn' for a simple Convolutional Neural Network (CNN).")
-        print("EPOCHS: number of training epochs to perform (default: 500)")
-    else:
-        kwargs = {}
-        if len(sys.argv) > 1:
-            kwargs['model'] = sys.argv[1]
-        if len(sys.argv) > 2:
-            kwargs['subject'] = sys.argv[2]
-        if len(sys.argv) > 3:
-            kwargs['num_epochs'] = int(sys.argv[3])
-        main(**kwargs)
+# ############################# Batch iterator ###############################
+
+def iterate_minibatches(inputs, targets, batchsize):
+    assert len(inputs) == len(targets)
+    for start_idx in range(0, len(inputs) - batchsize + 1, batchsize):
+        excerpt = slice(start_idx, start_idx + batchsize)
+        yield inputs[excerpt], targets[excerpt]
+
+# ############################## Main program ################################
+
+if len(sys.argv) > 1:
+    subject = sys.argv[1]
+else:
+    subject = 'chb01'
+if len(sys.argv) > 2:
+    num_epochs = int(sys.argv[2])
+else:
+    num_epochs = 50
+
+# Load the dataset
+subj = load_dataset(subject)
+x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, 1)
+x_train, x_val = x_train[:-100], x_train[-100:]
+y_train, y_val = y_train[:-100], y_train[-100:]
+
+batch_size=10
+
+input_var = T.tensor4('inputs')
+target_var = T.ivector('targets')
+net = scratch_net(input_var)
+train_fn, val_fn = scratch_model(input_var, target_var, net)
+
+train_err, val_err, val_acc = scratch_train(train_fn, val_fn, num_epochs)
+
+fig = plt.figure()
+plt.plot(range(num_epochs), train_err, label='Training error')
+plt.plot(range(num_epochs), val_err, label='Validation error')
+plt.title('ConvNet Training')
+plt.xlabel('Epochs')
+plt.ylabel('Error')
+plt.legend()
+plt.show()
+
+fig2 = plt.figure()
+plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
+plt.title('ConvNet Training: Validation accuracy')
+plt.xlabel('Epochs')
+plt.ylabel('Accuracy')
+plt.show()
+
+test_err, test_acc = scratch_test(val_fn)
+# Optionally, you could now dump the network weights to a file like this:
+# np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
+#
+# And load them again later on like this:
+# with np.load('model.npz') as f:
+#     param_values = [f['arr_%d' % i] for i in range(len(f.files))]
+# lasagne.layers.set_all_param_values(network, param_values)
