@@ -57,10 +57,17 @@ def scratch_model(input_var, target_var, net):
 
     test_loss = binary_crossentropy(test_prediction, target_var)
     test_loss = lasagne.objectives.aggregate(test_loss)
+<<<<<<< HEAD
     test_acc = T.mean(lasagne.objectives.binary_accuracy(test_prediction, target_var), dtype=theano.config.floatX)
 
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
     val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
+=======
+    test_acc  = T.mean(lasagne.objectives.binary_accuracy(test_prediction,target_var),dtype=theano.config.floatX)
+
+    train_fn = theano.function([input_var, target_var], loss, updates=updates, allow_input_downcast=True)
+    val_fn   = theano.function([input_var, target_var], [test_loss, test_acc], allow_input_downcast=True)
+>>>>>>> refs/remotes/origin/master
 
     return train_fn, val_fn
 
@@ -164,22 +171,23 @@ net = scratch_net(input_var)
 train_fn, val_fn = scratch_model(input_var, target_var, net)
 
 train_err, val_err, val_acc = scratch_train(train_fn, val_fn, num_epochs)
-
-fig = plt.figure()
-plt.plot(range(num_epochs), train_err, label='Training error')
-plt.plot(range(num_epochs), val_err, label='Validation error')
-plt.title('ConvNet Training')
-plt.xlabel('Epochs')
-plt.ylabel('Error')
-plt.legend()
-plt.show()
-
-fig2 = plt.figure()
-plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
-plt.title('ConvNet Training: Validation accuracy')
-plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
-plt.show()
+print('Training Complete.\n')
+if plotter:
+    fig = plt.figure()
+    plt.plot(range(num_epochs), train_err, label='Training error')
+    plt.plot(range(num_epochs), val_err, label='Validation error')
+    plt.title('ConvNet Training')
+    plt.xlabel('Epochs')
+    plt.ylabel('Error')
+    plt.legend()
+    plt.show()
+    
+    fig2 = plt.figure()
+    plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
+    plt.title('ConvNet Training: Validation accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.show()
 
 test_err, test_acc = scratch_test(val_fn)
 # Optionally, you could now dump the network weights to a file like this:
