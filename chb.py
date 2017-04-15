@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
-tigerdata = '/tigress/acellon/data'
+tigerdata = '/tigress/acellon/data/'
 
 genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
             'Ch10', 'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16', 'Ch17',
