@@ -57,17 +57,10 @@ def scratch_model(input_var, target_var, net):
 
     test_loss = binary_crossentropy(test_prediction, target_var)
     test_loss = lasagne.objectives.aggregate(test_loss)
-<<<<<<< HEAD
-    test_acc = T.mean(lasagne.objectives.binary_accuracy(test_prediction, target_var), dtype=theano.config.floatX)
-
-    train_fn = theano.function([input_var, target_var], loss, updates=updates)
-    val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
-=======
-    test_acc  = T.mean(lasagne.objectives.binary_accuracy(test_prediction,target_var),dtype=theano.config.floatX)
+    test_acc  = T.mean(lasagne.objectives.binary_accuracy(test_prediction, target_var), dtype=theano.config.floatX)
 
     train_fn = theano.function([input_var, target_var], loss, updates=updates, allow_input_downcast=True)
     val_fn   = theano.function([input_var, target_var], [test_loss, test_acc], allow_input_downcast=True)
->>>>>>> refs/remotes/origin/master
 
     return train_fn, val_fn
 
@@ -181,7 +174,7 @@ if plotter:
     plt.ylabel('Error')
     plt.legend()
     plt.show()
-    
+
     fig2 = plt.figure()
     plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
     plt.title('ConvNet Training: Validation accuracy')
