@@ -26,6 +26,7 @@ genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
 #################################### TO-DOs ####################################
 # TODO: add electrodes to CHBfile object
 
+
 def shuffle_in_unison(a, b):
     '''
     Retrieved from: http://stackoverflow.com/questions/4601373/better-way-to-shuffle-two-numpy-arrays-in-unison
@@ -37,6 +38,8 @@ def shuffle_in_unison(a, b):
     return None
 
 ############################ CHB-MIT record datatype ###########################
+
+
 class CHBfile:
     '''
     Dataype for EEG records from the CHB-MIT dataset, available via PhysioBank
@@ -57,9 +60,10 @@ class CHBfile:
         Indices (start, stop) of rec marking preictal period based on
         eventHorizon defined in add_szr().
     '''
+
     def __init__(self, name):
-        self.name    = name
-        self.rec     = None
+        self.name = name
+        self.rec = None
         self.ict_idx = []
         #self.epoch   = None
         self.pre_idx = []
@@ -68,7 +72,7 @@ class CHBfile:
         return '%r' % (self.__dict__)
 
     def add_szr(self, seizure):
-        #def add_szr(self, seizure, eventHorizon):
+        # def add_szr(self, seizure, eventHorizon):
         '''
         Add seizure to datatype.
 
@@ -90,10 +94,13 @@ class CHBfile:
         get_rec()  returns :ndarray: EEG record (23, 921600)
         get_num()  returns :int:     number of seizures in file
     '''
+
     def get_name(self):
         return self.name
+
     def get_rec(self):
         return self.rec
+
     def get_num(self):
         return len(self.ict_idx)
 
@@ -137,14 +144,14 @@ class CHBfile:
         rec = self.get_rec()
         starthz = start * 256
         if end is None:
-           endhz = rec.shape[1]
-           end = int(endhz/256)
+            endhz = rec.shape[1]
+            end = int(endhz / 256)
         else:
-           endhz = end * 256
-        subrec = rec[(chStart-1):chEnd,starthz:endhz]
+            endhz = end * 256
+        subrec = rec[(chStart - 1):chEnd, starthz:endhz]
         (numRows, numSamples) = subrec.shape
 
-        fig = plt.figure(figsize=(12,9))
+        fig = plt.figure(figsize=(12, 9))
         ax = fig.add_subplot(111, title='%s plot' % self.get_name())
         t = np.arange(starthz, endhz) / 256.0
 
@@ -194,6 +201,8 @@ class CHBfile:
         plt.show()
 
 ############################ CHB Subject data type #############################
+
+
 class CHBsubj(list):
 
     def __init__(self):
@@ -219,13 +228,13 @@ class CHBsubj(list):
     def info(self):
         seiz = self.get_seizures()
         for i in range(self.get_num()):
-            print('   -Seizure %d: %s %s' % (i+1, seiz[i][0], seiz[i][1]))
+            print('   -Seizure %d: %s %s' % (i + 1, seiz[i][0], seiz[i][1]))
         sdur, tdur = 0, 0
         for _, (start, stop) in seiz:
             sdur += (stop - start)
         for eeg in self:
-            tdur += (eeg.get_rec().shape[1])/256
-        sper = (sdur/tdur) * 100
+            tdur += (eeg.get_rec().shape[1]) / 256
+        sper = (sdur / tdur) * 100
 
         print('Subject: %s' % self[0].get_name().split('_')[0])
         print(' Number of files:    %d' % len(self))
@@ -235,7 +244,8 @@ class CHBsubj(list):
     def load_meta(self, subjname, tiger=False):
         '''
         Function to read/load metadata about list of EEG files from summary text
-        file. Metadata includes filename, number of seizures, and seizure indices.
+        file. Metadata includes filename, number of seizures, and seizure
+        indices.
 
         Parameters
         ----------
@@ -258,19 +268,22 @@ class CHBsubj(list):
         with open(filename, 'r') as f:
             while True:
                 line = f.readline()
-                if not line: break
+                if not line:
+                    break
                 # Find file metadata and create dict for each file
                 fn = re.match(r"File Name: (\w+).edf", line)
                 if fn:
                     # Add filename and skip two lines
                     newfile = CHBfile(fn.group(1))
                     if not subjname == 'chb24':
-                        f.readline(); f.readline();
+                        f.readline()
+                        f.readline()
                     # Add number of seizures
                     num_szr = int(re.match(r".*Seizures in File: (\d+)",
                                            f.readline()).group(1))
                     for i in range(num_szr):
-                        start = re.match(r".*Start Time: *(\d+) s", f.readline())
+                        start = re.match(r".*Start Time: *(\d+) s",
+                                         f.readline())
                         start = int(start.group(1))
                         end = re.match(r".*End Time: *(\d+) s", f.readline())
                         end = int(end.group(1))
@@ -285,8 +298,8 @@ class CHBsubj(list):
 
     def load_data(self, verbose=False, exthd=True, tiger=False):
         '''
-        Loads EEG records, either from compressed .npz file or by converting .mat
-        files.
+        Loads EEG records, either from compressed .npz file or by converting
+        .mat files.
 
         Parameters
         ----------
@@ -344,6 +357,7 @@ class CHBsubj(list):
 
 ############################# Labeling functions ###############################
 
+
 def get_labels(eeg, label_len=500):
     '''
     Format and label raw EEG data into non-overlapping 1-sec epochs.
@@ -362,7 +376,7 @@ def get_labels(eeg, label_len=500):
     np.append(), which does not append in-place.
     '''
     # Create label list
-    flen = int(eeg.get_rec().shape[1]/256)
+    flen = int(eeg.get_rec().shape[1] / 256)
     label = [0] * flen
     for start, stop in eeg.ict_idx:
         for i in range(start, stop):
@@ -375,6 +389,7 @@ def get_labels(eeg, label_len=500):
 
     # Return epochs in lists
     return train, label
+
 
 def label_epochs(subj, streamlen=1000):
     '''
@@ -421,9 +436,10 @@ def label_epochs(subj, streamlen=1000):
             del labels[idx]
 
     # Return as numpy arrays
-    epochs = np.expand_dims(np.asarray(epochs),axis=1)
+    epochs = np.expand_dims(np.asarray(epochs), axis=1)
     labels = np.asarray(labels, dtype='int32')
     return epochs, labels
+
 
 def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
 
@@ -432,7 +448,7 @@ def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
     # Create train, test, and label lists
     train, trainlab, test, testlab = [], [], [], []
     for eeg in subj:
-        eeglen = int(eeg.get_rec().shape[1]/256)
+        eeglen = int(eeg.get_rec().shape[1] / 256)
 
         if (loofile == eeg.get_name()):
             for t, epoch in enumerate(np.split(eeg.get_rec(), eeglen, axis=1)):
@@ -459,9 +475,9 @@ def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
                 del trainlab[idx]
 
     # Return as co-shuffled numpy arrays
-    train = np.expand_dims(np.asarray(train),axis=1)
+    train = np.expand_dims(np.asarray(train), axis=1)
     trainlab = np.asarray(trainlab, dtype='int32')
-    test = np.expand_dims(np.asarray(test),axis=1)
+    test = np.expand_dims(np.asarray(test), axis=1)
     testlab = np.asarray(testlab, dtype='int32')
 
     shuffle_in_unison(train, trainlab)

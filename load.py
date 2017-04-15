@@ -6,6 +6,7 @@ import sys
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 EXTHD = '/Volumes/extHD/CHBMIT/'
 
+
 def main(subject=0, VERBOSE=False):
     for dirname, dirnames, filenames in os.walk(EXTHD):
         # print path to all subdirectories first.
@@ -15,12 +16,12 @@ def main(subject=0, VERBOSE=False):
                 subdir = os.path.join(dirname, subdirname)
                 npzfile = subdir + '/' + subdirname + '.npz'
                 if os.path.exists(npzfile):
-                    print('%s has already been loaded.' % (subdirname +
-                    '.npz'))
+                    print('%s has already been loaded.'
+                          % (subdirname + '.npz'))
                 else:
                     print('Loading %s' % subdirname)
                     filelist = chb.load_meta(subdirname)
-                    data = chb.load_data(filelist,VERBOSE)
+                    data = chb.load_data(filelist, VERBOSE)
 
 
 if __name__ == '__main__':
