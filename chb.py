@@ -254,7 +254,9 @@ class CHBsubj(list):
 
         # TODO: recomment this # Create empty list of EEG files
         with open(filename, 'r') as f:
-            for line in f:
+            while True:
+                line = f.readline()
+                if not line: break
                 # Find file metadata and create dict for each file
                 fn = re.match(r"File Name: (\w+).edf", line)
                 if fn:
