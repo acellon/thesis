@@ -6,6 +6,8 @@
 # Data types for CHB-MIT EEG data files and associated functions for loading,
 # plotting, and labelling data.
 ################################################################################
+from __future__ import print_function
+
 import numpy as np
 import scipy.io as sio
 import os
