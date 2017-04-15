@@ -9,6 +9,7 @@ from matplotlib.collections import LineCollection
 
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 
+
 class CHBsubj(list):
 
     def __init__(self):
@@ -26,12 +27,12 @@ class CHBsubj(list):
             if filename == CHBfile.get_name():
                 return CHBfile
 
-
     def load_meta(self, folder):
-    #def load_meta(folder, eventHorizon=5):
+        # def load_meta(folder, eventHorizon=5):
         '''
         Function to read/load metadata about list of EEG files from summary text
-        file. Metadata includes filename, number of seizures, and seizure indices.
+        file. Metadata includes filename, number of seizures, and seizure
+        indices.
 
         Parameters
         ----------
@@ -57,12 +58,14 @@ class CHBsubj(list):
                     # Add filename and skip two lines
                     newfile = chb.CHBfile(fn.group(1))
                     if not folder == 'chb24':
-                        f.readline(); f.readline();
+                        f.readline()
+                        f.readline()
                     # Add number of seizures
                     num_szr = int(re.match(r".*Seizures in File: (\d+)",
                                            f.readline()).group(1))
                     for i in range(num_szr):
-                        start = re.match(r".*Start Time: *(\d+) s", f.readline())
+                        start = re.match(r".*Start Time: *(\d+) s",
+                                         f.readline())
                         start = int(start.group(1)) * 256
                         end = re.match(r".*End Time: *(\d+) s", f.readline())
                         end = int(end.group(1)) * 256
@@ -78,8 +81,8 @@ class CHBsubj(list):
 
     def load_data(self, verbose=False, exthd=True):
         '''
-        Loads EEG records, either from compressed .npz file or by converting .mat
-        files.
+        Loads EEG records, either from compressed .npz file or by converting
+        .mat files.
 
         Parameters
         ----------

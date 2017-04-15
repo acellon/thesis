@@ -19,10 +19,11 @@ import theano.tensor as T
 import lasagne
 from lasagne import layers
 from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid
-from lasagne.objectives import binary_crossentropy
+from lasagne.objectives import binary_crossentropy, binary_accuracy
 
 # ################## Download and prepare the CHBMIT dataset ##################
 # Loads data for a certain subject (taken as a string 'chbXX').
+
 
 def load_dataset(subjname, exthd=False, tiger=False):
     # Load data for subject
@@ -31,20 +32,25 @@ def load_dataset(subjname, exthd=False, tiger=False):
     subject.load_data(exthd=exthd, tiger=tiger)
     return subject
 
-
 # ##################### Build the neural network model #######################
-def scratch_net(input_var, data_size=(None,1,23,256), output_size=1):
 
+
+def scratch_net(input_var, data_size=(None, 1, 23, 256), output_size=1):
     net = {}
-    net['data']  = layers.InputLayer(data_size, input_var=input_var)
-    net['conv1'] = layers.Conv2DLayer(net['data'],  num_filters=4, filter_size=(1,7), pad='same', nonlinearity=rectify)
-    net['conv2'] = layers.Conv2DLayer(net['conv1'], num_filters=8, filter_size=(1,15), pad='same',
-                                      stride=(1,2), nonlinearity=rectify)
-    net['pool']  = layers.MaxPool2DLayer(net['conv2'], pool_size=(1,2))
-    net['fcl']   = layers.DenseLayer(net['pool'], num_units=256, nonlinearity=rectify)
-    net['out']   = layers.DenseLayer(net['fcl'], num_units=output_size, nonlinearity=sigmoid)
-
+    net['data'] = layers.InputLayer(data_size, input_var=input_var)
+    net['conv1'] = layers.Conv2DLayer(net['data'], num_filters=4,
+                                      filter_size=(1, 7), pad='same',
+                                      nonlinearity=rectify)
+    net['conv2'] = layers.Conv2DLayer(net['conv1'], num_filters=8,
+                                      filter_size=(1, 15), pad='same',
+                                      stride=(1, 2), nonlinearity=rectify)
+    net['pool'] = layers.MaxPool2DLayer(net['conv2'], pool_size=(1, 2))
+    net['fcl'] = layers.DenseLayer(net['pool'], num_units=256,
+                                   nonlinearity=rectify)
+    net['out'] = layers.DenseLayer(net['fcl'], num_units=output_size,
+                                   nonlinearity=sigmoid)
     return net
+
 
 def scratch_model(input_var, target_var, net):
 
@@ -59,21 +65,25 @@ def scratch_model(input_var, target_var, net):
 
     test_loss = binary_crossentropy(test_prediction, target_var)
     test_loss = lasagne.objectives.aggregate(test_loss)
-    test_acc  = T.mean(lasagne.objectives.binary_accuracy(test_prediction,target_var),dtype=theano.config.floatX)
+    test_acc = T.mean(binary_accuracy(test_prediction, target_var),
+                      dtype=theano.config.floatX)
 
-    train_fn = theano.function([input_var, target_var], loss, updates=updates, allow_input_downcast=True)
-    val_fn   = theano.function([input_var, target_var], [test_loss, test_acc], allow_input_downcast=True)
+    train_fn = theano.function([input_var, target_var], loss, updates=updates,
+                               allow_input_downcast=True)
+    val_fn = theano.function([input_var, target_var], [test_loss, test_acc],
+                             allow_input_downcast=True)
 
     return train_fn, val_fn
+
 
 def scratch_train(train_fn, val_fn, num_epochs):
     train_err_list = []
     val_err_list = []
     val_acc_list = []
 
-    print('='*80)
-    print('| epoch \t| train loss\t| val loss\t| val acc\t| time\t|')
-    print('='*80)
+    print('=' * 80)
+    print('| epoch \t| train loss\t| val loss\t| val acc\t| time\t')
+    print('=' * 80)
 
     for epoch in range(num_epochs):
         st = time.time()
@@ -99,13 +109,15 @@ def scratch_train(train_fn, val_fn, num_epochs):
 
         en = time.time()
         print('| %d \t\t| %.6f\t| %.6f\t| %.2f%%\t| %.2f s'
-              % (epoch+1, epoch_train_err, epoch_val_err, epoch_val_acc * 100, en-st))
-    print('-'*80)
+              % (epoch + 1, epoch_train_err, epoch_val_err,
+                 epoch_val_acc * 100, en - st))
+    print('-' * 80)
     return train_err_list, val_err_list, val_acc_list
+
 
 def scratch_test(val_fn):
     print('Test Results:')
-    print('='*80)
+    print('=' * 80)
 
     batch_err = []
     batch_acc = []
@@ -120,10 +132,11 @@ def scratch_test(val_fn):
 
     print('Test loss: %.6f' % test_err)
     print('Test accuracy: %.2f' % (test_acc * 100))
-    print('-'*80)
+    print('-' * 80)
     return test_err, test_acc
 
 # ############################# Batch iterator ###############################
+
 
 def iterate_minibatches(inputs, targets, batchsize):
     assert len(inputs) == len(targets)
@@ -132,6 +145,7 @@ def iterate_minibatches(inputs, targets, batchsize):
         yield inputs[excerpt], targets[excerpt]
 
 # ############################## Main program ################################
+
 
 if len(sys.argv) > 1:
     subject = sys.argv[1]
@@ -156,7 +170,7 @@ x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, 1)
 x_train, x_val = x_train[:-100], x_train[-100:]
 y_train, y_val = y_train[:-100], y_train[-100:]
 
-batch_size=10
+batch_size = 10
 
 input_var = T.tensor4('inputs')
 target_var = T.ivector('targets')
@@ -174,7 +188,7 @@ if plotter:
     plt.ylabel('Error')
     plt.legend()
     plt.show()
-    
+
     fig2 = plt.figure()
     plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
     plt.title('ConvNet Training: Validation accuracy')
