@@ -151,7 +151,7 @@ else:
     plotter = False
 
 # Load the dataset
-subj = load_dataset(subject)
+subj = load_dataset(subject, tiger=tiger)
 x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, 1)
 x_train, x_val = x_train[:-100], x_train[-100:]
 y_train, y_val = y_train[:-100], y_train[-100:]
