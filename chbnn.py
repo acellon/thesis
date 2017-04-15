@@ -141,6 +141,14 @@ if len(sys.argv) > 2:
     num_epochs = int(sys.argv[2])
 else:
     num_epochs = 50
+if len(sys.argv) > 3:
+    tiger = bool(sys.argv[3])
+else:
+    tiger = False
+if len(sys.argv) > 4:
+    plotter = bool(sys.argv[4])
+else:
+    plotter = False
 
 # Load the dataset
 subj = load_dataset(subject)

@@ -260,7 +260,7 @@ class CHBsubj(list):
                 if fn:
                     # Add filename and skip two lines
                     newfile = CHBfile(fn.group(1))
-                    if not folder == 'chb24':
+                    if not subjname == 'chb24':
                         f.readline(); f.readline();
                     # Add number of seizures
                     num_szr = int(re.match(r".*Seizures in File: (\d+)",
