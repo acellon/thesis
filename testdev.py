@@ -18,7 +18,7 @@ from lasagne.objectives import binary_crossentropy
 #%%
 # Load data for subject
 subject = chb.CHBsubj()
-subject.load_meta('chb03')
+subject.load_meta('chb01')
 subject.load_data(exthd=False)
 
 #%%

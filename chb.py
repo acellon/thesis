@@ -15,6 +15,7 @@ import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
 
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
+tigerdata = '/tigress/acellon/data'
 
 genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
             'Ch10', 'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16', 'Ch17',
@@ -229,7 +230,7 @@ class CHBsubj(list):
         print(' Number of seizures: %d' % self.get_num())
         print(' Total seizure duration: %d s (%f%%)' % (sdur, sper))
 
-    def load_meta(self, folder):
+    def load_meta(self, subjname, tiger=False):
         '''
         Function to read/load metadata about list of EEG files from summary text
         file. Metadata includes filename, number of seizures, and seizure indices.
@@ -245,8 +246,10 @@ class CHBsubj(list):
             All CHBfiles in folder (NB: files do not include CHBfile.rec data)
         '''
         # Locate summary textfile
-        dirname = PATH + folder
-        #filename = dirname + '/' + folder + '-summary.txt'
+        if tiger:
+            dirname = tigerdata + subjname
+        else:
+            dirname = PATH + subjname
         filename = dirname + '-summary.txt'
 
         # TODO: recomment this # Create empty list of EEG files
@@ -268,7 +271,6 @@ class CHBsubj(list):
                         end = re.match(r".*End Time: *(\d+) s", f.readline())
                         end = int(end.group(1))
                         newfile.add_szr((start, end))
-                        #newfile.add_szr((start, end), eventHorizon)
 
                     # Add file metadata to filelist
                     self.add_file(newfile)
@@ -277,7 +279,7 @@ class CHBsubj(list):
         f.closed
         return
 
-    def load_data(self, verbose=False, exthd=True):
+    def load_data(self, verbose=False, exthd=True, tiger=False):
         '''
         Loads EEG records, either from compressed .npz file or by converting .mat
         files.
@@ -302,7 +304,10 @@ class CHBsubj(list):
         folder, _ = self[0].get_name().split('_')
         if re.match(r"chb17.", folder):
             folder = 'chb17'
-        if exthd:
+        # TODO: update tiger code if I want to do MAT conversion on cluster
+        if tiger:
+            savename = tigerdata + folder + '.npz'
+        elif exthd:
             savename = '/Volumes/extHD/CHBMIT/' + folder + '/' + folder + '.npz'
         else:
             savename = PATH + folder + '.npz'

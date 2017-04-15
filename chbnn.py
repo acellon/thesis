@@ -24,11 +24,11 @@ from lasagne.objectives import binary_crossentropy
 # ################## Download and prepare the CHBMIT dataset ##################
 # Loads data for a certain subject (taken as a string 'chbXX').
 
-def load_dataset(subjname):
+def load_dataset(subjname, exthd=False, tiger=False):
     # Load data for subject
     subject = chb.CHBsubj()
     subject.load_meta(subjname)
-    subject.load_data(exthd=False)
+    subject.load_data(exthd=exthd, tiger=tiger)
     return subject
 
 
