@@ -23,11 +23,11 @@ subject.load_data(exthd=False)
 
 #%%
 # Load and read training and test set images and labels.
-x_train, y_train, x_test, y_test = chb.leaveOneOut(subject, 1, 1000, 100)
+x_train, y_train, x_test, y_test = chb.leaveOneOut(subject, 1, 1000, 99)
 
 # We reserve the last 100 training examples for validation.
-x_train, x_val = x_train[:-100], x_train[-100:]
-y_train, y_val = y_train[:-100], y_train[-100:]
+x_train, x_val = x_train[:-99], x_train[-99:]
+y_train, y_val = y_train[:-99], y_train[-99:]
 
 #%%
 data_size = (None, 1, 23, 256)

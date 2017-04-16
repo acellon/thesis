@@ -179,37 +179,40 @@ else:
 
 # Load the dataset
 subj = load_dataset(subject, tiger=tiger)
-x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, 1)
-x_train, x_val = x_train[:-100], x_train[-100:]
-y_train, y_val = y_train[:-100], y_train[-100:]
 
-batch_size = 10
+for szr in range(1, subj.get_num() + 1):
+    print('Leave-One-Out: %d of %d' % (szr, subj.get_num()))
+    x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, szr)
+    x_train, x_val = x_train[:-100], x_train[-100:]
+    y_train, y_val = y_train[:-100], y_train[-100:]
 
-input_var = T.tensor4('inputs')
-target_var = T.ivector('targets')
-net = scratch_net(input_var)
-train_fn, val_fn = scratch_model(input_var, target_var, net)
+    batch_size = 10
 
-train_err, val_err, val_acc = scratch_train(train_fn, val_fn, num_epochs)
-print('Training Complete.\n')
-if plotter:
-    fig = plt.figure()
-    plt.plot(range(num_epochs), train_err, label='Training error')
-    plt.plot(range(num_epochs), val_err, label='Validation error')
-    plt.title('ConvNet Training')
-    plt.xlabel('Epochs')
-    plt.ylabel('Error')
-    plt.legend()
-    plt.show()
+    input_var = T.tensor4('inputs')
+    target_var = T.ivector('targets')
+    net = scratch_net(input_var)
+    train_fn, val_fn = scratch_model(input_var, target_var, net)
 
-    fig2 = plt.figure()
-    plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
-    plt.title('ConvNet Training: Validation accuracy')
-    plt.xlabel('Epochs')
-    plt.ylabel('Accuracy')
-    plt.show()
+    train_err, val_err, val_acc = scratch_train(train_fn, val_fn, num_epochs)
+    print('Training Complete.\n')
+    if plotter:
+        fig = plt.figure()
+        plt.plot(range(num_epochs), train_err, label='Training error')
+        plt.plot(range(num_epochs), val_err, label='Validation error')
+        plt.title('ConvNet Training')
+        plt.xlabel('Epochs')
+        plt.ylabel('Error')
+        plt.legend()
+        plt.show()
 
-test_err, test_acc = scratch_test(val_fn)
+        fig2 = plt.figure()
+        plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
+        plt.title('ConvNet Training: Validation accuracy')
+        plt.xlabel('Epochs')
+        plt.ylabel('Accuracy')
+        plt.show()
+
+    test_err, test_acc = scratch_test(val_fn)
 # Optionally, you could now dump the network weights to a file like this:
 # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
 #
