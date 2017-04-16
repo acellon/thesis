@@ -19,9 +19,11 @@ from matplotlib.collections import LineCollection
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 tigerdata = '/tigress/acellon/data/'
 
-genticks = ['Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9',
-            'Ch10', 'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16', 'Ch17',
-            'Ch18', 'Ch19', 'Ch20', 'Ch21', 'Ch22', 'Ch23']
+genticks = [
+    'Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9', 'Ch10',
+    'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16', 'Ch17', 'Ch18', 'Ch19',
+    'Ch20', 'Ch21', 'Ch22', 'Ch23'
+]
 
 #################################### TO-DOs ####################################
 # TODO: add electrodes to CHBfile object
@@ -36,6 +38,7 @@ def shuffle_in_unison(a, b):
     np.random.set_state(rng_state)
     np.random.shuffle(b)
     return None
+
 
 ############################ CHB-MIT record datatype ###########################
 
@@ -181,8 +184,8 @@ class CHBfile:
         # Add traces for each channel
         traces = []
         for i in range(numRows):
-            traces.append(np.hstack((t[:, np.newaxis],
-                                     subrec[i, :, np.newaxis])))
+            traces.append(
+                np.hstack((t[:, np.newaxis], subrec[i, :, np.newaxis])))
             ticklocs.append(i * traceheight)
 
         offsets = np.zeros((numRows, 2), dtype=float)
@@ -200,11 +203,11 @@ class CHBfile:
         plt.tight_layout()
         plt.show()
 
+
 ############################ CHB Subject data type #############################
 
 
 class CHBsubj(list):
-
     def __init__(self):
         self.name = None
         self.seizures = []
@@ -279,8 +282,9 @@ class CHBsubj(list):
                         f.readline()
                         f.readline()
                     # Add number of seizures
-                    num_szr = int(re.match(r".*Seizures in File: (\d+)",
-                                           f.readline()).group(1))
+                    num_szr = int(
+                        re.match(r".*Seizures in File: (\d+)", f.readline())
+                        .group(1))
                     for i in range(num_szr):
                         start = re.match(r".*Start Time: *(\d+) s",
                                          f.readline())
@@ -354,6 +358,7 @@ class CHBsubj(list):
             print('Done: %f seconds elapsed.' % (time.clock() - timerstart))
 
         return
+
 
 ############################# Labeling functions ###############################
 

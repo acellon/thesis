@@ -11,7 +11,6 @@ PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 
 
 class CHBsubj(list):
-
     def __init__(self):
         self.szr_num = 0
         self.seizures = []
@@ -61,8 +60,9 @@ class CHBsubj(list):
                         f.readline()
                         f.readline()
                     # Add number of seizures
-                    num_szr = int(re.match(r".*Seizures in File: (\d+)",
-                                           f.readline()).group(1))
+                    num_szr = int(
+                        re.match(r".*Seizures in File: (\d+)", f.readline())
+                        .group(1))
                     for i in range(num_szr):
                         start = re.match(r".*Start Time: *(\d+) s",
                                          f.readline())
@@ -93,7 +93,8 @@ class CHBsubj(list):
             Controls how much output info is given.
 
         exthd : bool (default: True)
-            If True, data loaded from external HD. If False, data loaded from PATH.
+            If True, data loaded from external HD. If False, data loaded from
+            PATH.
 
         Returns
         -------
