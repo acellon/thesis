@@ -179,9 +179,12 @@ else:
 
 # Load the dataset
 subj = load_dataset(subject, tiger=tiger)
+sys.stdout.flush()
 
-for szr in range(1, subj.get_num() + 1):
-    print('Leave-One-Out: %d of %d' % (szr, subj.get_num()))
+num = subj.get_num()
+test_accs = []
+for szr in range(1, num + 1):
+    print('\nLeave-One-Out: %d of %d' % (szr, num))
     x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, szr)
     x_train, x_val = x_train[:-100], x_train[-100:]
     y_train, y_val = y_train[:-100], y_train[-100:]
@@ -213,6 +216,12 @@ for szr in range(1, subj.get_num() + 1):
         plt.show()
 
     test_err, test_acc = scratch_test(val_fn)
+    test_accs.append(test_acc)
+    sys.stdout.flush()
+
+print('=' * 80)
+print('Average test accuracy for %d Leave-One-Out tests: %.2f'
+      % (num, mean(test_accs)))
 # Optionally, you could now dump the network weights to a file like this:
 # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
 #
