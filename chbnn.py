@@ -20,6 +20,10 @@ from lasagne import layers
 from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid
 from lasagne.objectives import binary_crossentropy, binary_accuracy
 
+# TODO: Early stopping
+# TODO: save network params?
+# TODO: tune like a mofo!!!
+
 # ################## Download and prepare the CHBMIT dataset ##################
 # Loads data for a certain subject (taken as a string 'chbXX').
 
@@ -220,8 +224,8 @@ for szr in range(1, num + 1):
     sys.stdout.flush()
 
 print('=' * 80)
-print('Average test accuracy for %d Leave-One-Out tests: %.2f'
-      % (num, mean(test_accs)))
+print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
+      (num, np.mean(test_accs)))
 # Optionally, you could now dump the network weights to a file like this:
 # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
 #

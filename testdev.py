@@ -5,15 +5,19 @@ import sys
 import os
 import time
 import chb
+import matplotlib.pyplot as plt
 
 import numpy as np
 import theano
 import theano.tensor as T
 
 import lasagne
-from lasagne import layers
+import nolearn
+from nolearn.lasagne import NeuralNet, TrainSplit
+from lasagne.layers import InputLayer, Conv2DLayer, MaxPool2DLayer, DenseLayer
 from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid
-from lasagne.objectives import binary_crossentropy
+from lasagne.objectives import binary_crossentropy, binary_accuracy
+
 
 #%%
 # Load data for subject
@@ -23,7 +27,48 @@ subject.load_data(exthd=False)
 
 #%%
 # Load and read training and test set images and labels.
-x_train, y_train, x_test, y_test = chb.leaveOneOut(subject, 1, 1000, 99)
+x_train, y_train, x_test, y_test = chb.leaveOneOut(subject, 1)
+
+
+#%%
+
+layers0 = [
+    (InputLayer, {'shape': (None, 1, 23, 256)}),
+
+    (Conv2DLayer, {'num_filters': 4, 'filter_size': (1, 7), 'pad': 'same',
+                   'nonlinearity': rectify}),
+    (Conv2DLayer, {'num_filters': 8, 'filter_size': (1, 15), 'pad': 'same',
+                   'nonlinearity': rectify}),
+    (MaxPool2DLayer, {'pool_size': (1, 2)}),
+
+    (DenseLayer, {'num_units': 256, 'nonlinearity': rectify}),
+    (DenseLayer, {'num_units': 1, 'nonlinearity': sigmoid}),
+]
+
+net0 = NeuralNet(
+    layers=layers0,
+    max_epochs=50,
+
+    update=lasagne.updates.rmsprop,
+    update_learning_rate=1e-5,
+
+    objective_l2=0.0025,
+
+    train_split=TrainSplit(eval_size=0.1),
+    verbose=1,
+    objective_loss_function=binary_crossentropy,
+)
+
+x_train, y_train, x_test, y_test = chb.leaveOneOut(subject, 1)
+net0.fit(x_train, y_train)
+
+#%%
+
+net0.predict(x_test)
+#%%
+y_test
+#%%
+
 
 # We reserve the last 100 training examples for validation.
 x_train, x_val = x_train[:-99], x_train[-99:]
