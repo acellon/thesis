@@ -39,6 +39,12 @@ def shuffle_in_unison(a, b):
     np.random.shuffle(b)
     return None
 
+def load_dataset(subjname, exthd=False, tiger=False):
+    # Load data for subject
+    subject = chb.CHBsubj()
+    subject.load_meta(subjname, tiger=tiger)
+    subject.load_data(exthd=exthd, tiger=tiger)
+    return subject
 
 ############################ CHB-MIT record datatype ###########################
 
@@ -316,16 +322,13 @@ class CHBsubj(list):
         exthd : bool (default: True)
             If True, data loaded from external HD. If False, data loaded from PATH.
 
-        Returns
-        -------
-        filelist : list of CHBfile
-            All CHBfiles for single subject (now including rec data).
+        tiger : bool (default: False)
+            If True, overrides other paths and loads on server.
         '''
-        timerstart = time.clock()
+        st = time.clock()
         folder, _ = self[0].get_name().split('_')
         if re.match(r"chb17.", folder):
             folder = 'chb17'
-        # TODO: update tiger code if I want to do MAT conversion on cluster
         if tiger:
             savename = tigerdata + folder + '.npz'
         elif exthd:
@@ -338,7 +341,7 @@ class CHBsubj(list):
             loaddict = np.load(savename)
             for eeg in self:
                 eeg.add_rec(loaddict[eeg.get_name()])
-            print('Done: %f seconds elapsed.' % (time.clock() - timerstart))
+            print('Done: %f seconds elapsed.' % (time.clock() - st))
             return
         else:
             savedict = {}
@@ -478,10 +481,7 @@ def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
             else:
                 del train[idx]
                 del trainlab[idx]
-    
-    print('Leave One Out | shape of training list entries:')
-    for matrix in train:
-        print(matrix.shape)
+
     # Return as co-shuffled numpy arrays
     train = np.asarray(train, dtype='float64')
     train = np.expand_dims(train, axis=1)
