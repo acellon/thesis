@@ -3,6 +3,8 @@ import os
 import re
 import sys
 import time
+import numpy as np
+import scipy.io as sio
 
 # TODO: fix file nav on tigress serrver - right now the navigation
 #       doesn't reflect how files are actually organized
@@ -13,7 +15,7 @@ def main(subject=0, pathchoice='exthd', VERBOSE=False):
     if pathchoice == 'local':
         pth = '/Users/adamcellon/Drive/senior/thesis/data/'
     elif pathchoice == 'tiger':
-        pth = '/tigress/acellon/'
+        pth = '/tigress/acellon/mat/'
         tiger = True
     else:
         pth = '/Volumes/extHD/CHBMIT/'
@@ -21,6 +23,7 @@ def main(subject=0, pathchoice='exthd', VERBOSE=False):
 
     for dirname, dirnames, filenames in os.walk(pth):
         # print path to all subdirectories first.
+        print(dirnames)
         for subdirname in dirnames:
             num = int(re.match(r"chb(\d+)", subdirname).group(1))
             if (subject == num) or not subject:
@@ -32,15 +35,20 @@ def main(subject=0, pathchoice='exthd', VERBOSE=False):
                 else:
                     print('Loading %s' % subdirname)
                     savedict = {}
-                    for matfile in os.walk(subdirname)[2]:
-                        print('Converting %s to np array' % matfile)
-
-                        matname, _ = matfile.split('.')
-                        savedict[matname] = sio.loadmat(dirname + matname)['rec']
+                    for (dname, dnames, fnames) in os.walk(subdir):
+                        print(dname)
+                        print(dnames)
+                        print(fnames)
+                        for matfile in fnames:
+                            print('Converting %s to np array' % matfile)
+                            sys.stdout.flush()
+                            matname, _ = matfile.split('.')
+                            savedict[matname] = sio.loadmat(dirname + subdirname + '/' + matname)['rec']
 
                     print('Saving and compressing...')
-                    np.savez_compressed(savename, **savedict)
-                    print('Done: %f seconds elapsed.' % (time.clock() - timerstart))
+                    sys.stdout.flush()
+                    np.savez_compressed(subdirname, **savedict)
+                    print('Done: %f seconds elapsed.' % (time.clock() - start))
 
 
 
@@ -57,7 +65,7 @@ if __name__ == '__main__':
         if len(sys.argv) > 1:
             kwargs['subject'] = int(sys.argv[1])
         if len(sys.argv) > 2:
-            kwargs['pathvar'] = sys.argv[2]
+            kwargs['pathchoice'] = sys.argv[2]
         if len(sys.argv) > 3:
             kwargs['VERBOSE'] = sys.argv[3]
         main(**kwargs)

@@ -5,7 +5,7 @@
 #SBATCH --error=chbnn.e%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=01:00:00
+#SBATCH --time=00:10:00
 #SBATCH --workdir=/home/acellon/thesis
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32G

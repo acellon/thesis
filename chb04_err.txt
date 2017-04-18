@@ -1,0 +1,23 @@
+WARNING (theano.sandbox.cuda): The cuda backend is deprecated and will be removed in the next release (v0.10).  Please switch to the gpuarray backend. You can get more information about how to switch at this URL:
+ https://github.com/Theano/Theano/wiki/Converting-to-the-new-gpu-back-end%28gpuarray%29
+
+Using gpu device 0: Tesla K20m (CNMeM is disabled, cuDNN not available)
+Traceback (most recent call last):
+  File "./chbnn.py", line 203, in <module>
+    train_err, val_err, val_acc = scratch_train(train_fn, val_fn, num_epochs)
+  File "./chbnn.py", line 109, in scratch_train
+    err = train_fn(inputs, targets)
+  File "/home/acellon/.local/lib/python2.7/site-packages/theano/compile/function_module.py", line 795, in __call__
+    allow_downcast=s.allow_downcast)
+  File "/home/acellon/.local/lib/python2.7/site-packages/theano/tensor/type.py", line 117, in filter
+    data = theano._asarray(data, dtype=self.dtype)
+  File "/home/acellon/.local/lib/python2.7/site-packages/theano/misc/safe_asarray.py", line 34, in _asarray
+    rval = np.asarray(a, dtype=dtype, order=order)
+  File "/home/acellon/.local/lib/python2.7/site-packages/numpy/core/numeric.py", line 531, in asarray
+    return array(a, dtype, copy=False, order=order)
+ValueError: Bad input argument to theano function with name "./chbnn.py:87" at index 0 (0-based).  
+Backtrace when that variable is created:
+
+  File "./chbnn.py", line 198, in <module>
+    input_var = T.tensor4('inputs')
+setting an array element with a sequence.

@@ -478,11 +478,16 @@ def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
             else:
                 del train[idx]
                 del trainlab[idx]
-
+    
+    print('Leave One Out | shape of training list entries:')
+    for matrix in train:
+        print(matrix.shape)
     # Return as co-shuffled numpy arrays
-    train = np.expand_dims(np.asarray(train), axis=1)
+    train = np.asarray(train, dtype='float64')
+    train = np.expand_dims(train, axis=1)
     trainlab = np.asarray(trainlab, dtype='int32')
-    test = np.expand_dims(np.asarray(test), axis=1)
+    test = np.asarray(test, dtype='float64')
+    test = np.expand_dims(test, axis=1)
     testlab = np.asarray(testlab, dtype='int32')
 
     shuffle_in_unison(train, trainlab)
