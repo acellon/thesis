@@ -3,6 +3,10 @@ import os
 import sys
 import time
 import numpy as np
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 pth = '/tigress/acellon/data/'
 def main(subjname, compressed=True):
@@ -23,16 +27,35 @@ def main(subjname, compressed=True):
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
     elif subjname in op2:
         del subject[0]
+        newsubj = chb.CHBsubj()
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
+            newEEG = CHBfile(eeg.get_name())
+            for szr in eeg.ict_idx:
+                newEEG.add_szr(szr)
+        pklname = pth + subjname + '.p'
+        os.remove(pklname)
+        pickle.dump(newsubj, open(pklname, 'wb'))
     elif subjname in op3:
         del subject[-1]
+        newsubj = chb.CHBsubj()
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
+            for szr in eeg.ict_idx:
+                newEEG.add_szr(szr)
+        pklname = pth + subjname + '.p'
+        os.remove(pklname)
+        pickle.dump(newsubj, open(pklname, 'wb'))
     elif subjname in op4:
         del subject[-2:]
+        newsubj = chb.CHBsubj()
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
+            for szr in eeg.ict_idx:
+                newEEG.add_szr(szr)
+        pklname = pth + subjname + '.p'
+        os.remove(pklname)
+        pickle.dump(newsubj, open(pklname, 'wb'))
     elif subjname in op5:
         for idx, eeg in enumerate(subject):
             if not idx:

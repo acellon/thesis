@@ -15,14 +15,19 @@ import re
 import time
 import matplotlib.pyplot as plt
 from matplotlib.collections import LineCollection
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 PATH = '/Users/adamcellon/Drive/senior/thesis/data/'
 tigerdata = '/tigress/acellon/data/'
 
 genticks = [
-    'Ch1', 'Ch2', 'Ch3', 'Ch4', 'Ch5', 'Ch6', 'Ch7', 'Ch8', 'Ch9', 'Ch10',
-    'Ch11', 'Ch12', 'Ch13', 'Ch14', 'Ch15', 'Ch16', 'Ch17', 'Ch18', 'Ch19',
-    'Ch20', 'Ch21', 'Ch22', 'Ch23'
+    'FP1-F7', 'F7-T7', 'T7-P7',  'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3',
+    'P3-O1', 'FP2-F4', 'F4-C4', 'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8',
+    'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9', 'FT9-FT10',
+    'FT10-T8', 'T8-P8'
 ]
 
 #################################### TO-DOs ####################################
@@ -41,10 +46,60 @@ def shuffle_in_unison(a, b):
 
 def load_dataset(subjname, exthd=False, tiger=False):
     # Load data for subject
-    subject = chb.CHBsubj()
-    subject.load_meta(subjname, tiger=tiger)
+    subject = load_meta(subjname, tiger=tiger)
     subject.load_data(exthd=exthd, tiger=tiger)
     return subject
+
+def load_meta(subjname, tiger=False):
+    '''
+    Function to read/load metadata about list of EEG files from summary text
+    file. Metadata includes filename, number of seizures, and seizure
+    indices.
+    '''
+    if tiger:
+        dirname = tigerdata + subjname
+    else:
+        dirname = PATH + subjname
+    filename = dirname + '-summary.txt'
+    pklname = dirname + '.p'
+
+    subject = CHBsubj()
+
+    if os.path.exists(pklname):
+        subject = pickle.load(open(pklname, 'rb'))
+        return subject
+
+    with open(filename, 'r') as f:
+        while True:
+            line = f.readline()
+            if not line:
+                break
+            # Find file metadata and create dict for each file
+            fn = re.match(r"File Name: (\w+).edf", line)
+            if fn:
+                # Add filename and skip two lines
+                newfile = CHBfile(fn.group(1))
+                if not subjname == 'chb24':
+                    f.readline()
+                    f.readline()
+                # Add number of seizures
+                num_szr = int(
+                    re.match(r".*Seizures in File: (\d+)", f.readline())
+                    .group(1))
+                for i in range(num_szr):
+                    start = re.match(r".*Start Time: *(\d+) s",
+                                     f.readline())
+                    start = int(start.group(1))
+                    end = re.match(r".*End Time: *(\d+) s", f.readline())
+                    end = int(end.group(1))
+                    newfile.add_szr((start, end))
+
+                subject.add_file(newfile)
+
+    f.closed
+    pickle.dump(subject, open(pklname, 'wb'))
+    return subject
+
 
 ############################ CHB-MIT record datatype ###########################
 
@@ -250,61 +305,6 @@ class CHBsubj(list):
         print(' Number of seizures: %d' % self.get_num())
         print(' Total seizure duration: %d s (%f%%)' % (sdur, sper))
 
-    def load_meta(self, subjname, tiger=False):
-        '''
-        Function to read/load metadata about list of EEG files from summary text
-        file. Metadata includes filename, number of seizures, and seizure
-        indices.
-
-        Parameters
-        ----------
-        folder : string
-            Name of folder (in format chbXX) corresponding to CHB-MIT subject.
-
-        Returns
-        -------
-        filelist : list of CHBfile
-            All CHBfiles in folder (NB: files do not include CHBfile.rec data)
-        '''
-        # Locate summary textfile
-        if tiger:
-            dirname = tigerdata + subjname
-        else:
-            dirname = PATH + subjname
-        filename = dirname + '-summary.txt'
-
-        # TODO: recomment this # Create empty list of EEG files
-        with open(filename, 'r') as f:
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                # Find file metadata and create dict for each file
-                fn = re.match(r"File Name: (\w+).edf", line)
-                if fn:
-                    # Add filename and skip two lines
-                    newfile = CHBfile(fn.group(1))
-                    if not subjname == 'chb24':
-                        f.readline()
-                        f.readline()
-                    # Add number of seizures
-                    num_szr = int(
-                        re.match(r".*Seizures in File: (\d+)", f.readline())
-                        .group(1))
-                    for i in range(num_szr):
-                        start = re.match(r".*Start Time: *(\d+) s",
-                                         f.readline())
-                        start = int(start.group(1))
-                        end = re.match(r".*End Time: *(\d+) s", f.readline())
-                        end = int(end.group(1))
-                        newfile.add_szr((start, end))
-
-                    # Add file metadata to filelist
-                    self.add_file(newfile)
-
-        # Close summary file and return filelist
-        f.closed
-        return
 
     def load_data(self, verbose=False, exthd=True, tiger=False):
         '''
