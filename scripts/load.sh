@@ -14,4 +14,4 @@
 export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 
 module load anaconda
-python /home/acellon/thesis/load.py 5 tiger True
+python /home/acellon/thesis/load.py 5 tiger

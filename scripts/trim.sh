@@ -1,13 +1,11 @@
 #!/bin/sh
 
-#SBATCH --job-name=chbnn.py
-#SBATCH --output=chbnn.o%j
-#SBATCH --error=chbnn.e%j
+#SBATCH --job-name=dataTrim.py
+#SBATCH --output=dataTrim.o%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=01:00:00
-#SBATCH --workdir=/home/acellon/thesis
-#SBATCH --gres=gpu:1
+#SBATCH --workdir=/tigress/acellon/data
 #SBATCH --mem=32G
 #SBATCH --mail-type=end
 #SBATCH --mail-user=acellon@princeton.edu
@@ -16,6 +14,6 @@
 export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 
 module load anaconda
-module load cudatoolkit
-module load intel-mkl
-python ./chbnn.py chb04 5 True
+python /home/acellon/thesis/dataTrim.py chb21
+python /home/acellon/thesis/dataTrim.py chb22
+

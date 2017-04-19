@@ -18,4 +18,4 @@ export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 module load anaconda
 module load cudatoolkit
 module load intel-mkl
-python ./chbnn.py chb04 5 True
+python ./chbnn.py chb09 5 True

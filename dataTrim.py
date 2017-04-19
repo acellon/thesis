@@ -10,9 +10,9 @@ except:
 
 pth = '/tigress/acellon/data/'
 def main(subjname, compressed=True):
-    st = time.clock()
 
     subject = chb.load_dataset(subjname, tiger=True)
+    sys.stdout.flush()
 
     op1 = set(['chb14', 'chb20', 'chb21', 'chb22'])
     op2 = set(['chb18', 'chb19'])
@@ -21,7 +21,7 @@ def main(subjname, compressed=True):
     op5 = set(['chb11'])
     op6 = set(['chb04'])
     op7 = set(['chb09'])
-
+    
     if subjname in op1:
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
@@ -63,7 +63,7 @@ def main(subjname, compressed=True):
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
     elif subjname in op6:
         for idx, eeg in enumerate(subject):
-            if idx < 5:
+            if idx < 6:
                 continue
             eeg.add_rec(np.delete(eeg.get_rec(), 23, 0))
     elif subjname in op7:
@@ -71,11 +71,13 @@ def main(subjname, compressed=True):
             if not idx:
                 continue
             eeg.add_rec(np.delete(eeg.get_rec(), 23, 0))
-
+    
+    print('Saving...')
     savedict = {}
     for eeg in subject:
         savedict[eeg.get_name()] = eeg.get_rec()
 
+    st = time.clock()
     savename = pth + subjname + '.npz'
     os.remove(savename)
     if compressed:
