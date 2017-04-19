@@ -24,18 +24,6 @@ from lasagne.objectives import binary_crossentropy, binary_accuracy
 # TODO: save network params?
 # TODO: tune like a mofo!!!
 
-# ################## Download and prepare the CHBMIT dataset ##################
-# Loads data for a certain subject (taken as a string 'chbXX').
-
-
-def load_dataset(subjname, exthd=False, tiger=False):
-    # Load data for subject
-    subject = chb.CHBsubj()
-    subject.load_meta(subjname, tiger=tiger)
-    subject.load_data(exthd=exthd, tiger=tiger)
-    return subject
-
-
 # ##################### Build the neural network model #######################
 
 
@@ -182,7 +170,7 @@ else:
     plotter = False
 
 # Load the dataset
-subj = load_dataset(subject, tiger=tiger)
+subj = chb.load_dataset(subject, tiger=tiger)
 sys.stdout.flush()
 
 num = subj.get_num()
@@ -223,9 +211,11 @@ for szr in range(1, num + 1):
     test_accs.append(test_acc)
     sys.stdout.flush()
 
-print('=' * 80)
+print('*-' * 40)
 print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
-      (num, np.mean(test_accs)))
+      (num, np.mean(test_accs) * 100))
+print('*-' * 40)
+print()
 # Optionally, you could now dump the network weights to a file like this:
 # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
 #

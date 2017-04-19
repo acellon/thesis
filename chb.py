@@ -41,7 +41,7 @@ def shuffle_in_unison(a, b):
 
 def load_dataset(subjname, exthd=False, tiger=False):
     # Load data for subject
-    subject = chb.CHBsubj()
+    subject = CHBsubj()
     subject.load_meta(subjname, tiger=tiger)
     subject.load_data(exthd=exthd, tiger=tiger)
     return subject
