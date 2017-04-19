@@ -2,7 +2,3 @@ WARNING (theano.sandbox.cuda): The cuda backend is deprecated and will be remove
  https://github.com/Theano/Theano/wiki/Converting-to-the-new-gpu-back-end%28gpuarray%29
 
 Using gpu device 0: Tesla K20m (CNMeM is disabled, cuDNN not available)
-Traceback (most recent call last):
-  File "./chbnn.py", line 223, in <module>
-    print('Average test accuracy for %d Leave-One-Out tests: %.2f'
-NameError: name 'mean' is not defined
