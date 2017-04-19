@@ -130,7 +130,7 @@ class CHBfile:
         self.rec = None
         self.ict_idx = []
         #self.epoch   = None
-        self.pre_idx = []
+        #self.pre_idx = []
 
     def __repr__(self):
         return '%r' % (self.__dict__)
@@ -173,6 +173,11 @@ class CHBfile:
             if (start <= idx <= stop):
                 return True
         return False
+
+    def copy_meta(self):
+        copy = CHBfile(self.name)
+        copy.ict_idx = self.ict_idx
+        return copy
 
     def info(self):
         '''

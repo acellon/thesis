@@ -30,9 +30,8 @@ def main(subjname, compressed=True):
         newsubj = chb.CHBsubj()
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
-            newEEG = CHBfile(eeg.get_name())
-            for szr in eeg.ict_idx:
-                newEEG.add_szr(szr)
+            newEEG = eeg.copy_meta()
+            newsubj.append(newEEG)
         pklname = pth + subjname + '.p'
         os.remove(pklname)
         pickle.dump(newsubj, open(pklname, 'wb'))
@@ -41,8 +40,8 @@ def main(subjname, compressed=True):
         newsubj = chb.CHBsubj()
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
-            for szr in eeg.ict_idx:
-                newEEG.add_szr(szr)
+            newEEG = eeg.copy_meta()
+            newsubj.append(newEEG)
         pklname = pth + subjname + '.p'
         os.remove(pklname)
         pickle.dump(newsubj, open(pklname, 'wb'))
@@ -51,8 +50,8 @@ def main(subjname, compressed=True):
         newsubj = chb.CHBsubj()
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
-            for szr in eeg.ict_idx:
-                newEEG.add_szr(szr)
+            newEEG = eeg.copy_meta()
+            newsubj.append(newEEG)
         pklname = pth + subjname + '.p'
         os.remove(pklname)
         pickle.dump(newsubj, open(pklname, 'wb'))

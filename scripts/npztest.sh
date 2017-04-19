@@ -28,7 +28,10 @@ python ./npztest.py chb08
 python ./npztest.py chb09
 python ./npztest.py chb10
 python ./npztest.py chb11
+
+
 python ./npztest.py chb14
+
 python ./npztest.py chb16
 python ./npztest.py chb17
 python ./npztest.py chb18

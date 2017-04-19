@@ -14,6 +14,8 @@
 export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 
 module load anaconda
-python /home/acellon/thesis/dataTrim.py chb21
-python /home/acellon/thesis/dataTrim.py chb22
+python /home/acellon/thesis/dataTrim.py chb16
+python /home/acellon/thesis/dataTrim.py chb17
+python /home/acellon/thesis/dataTrim.py chb18
+python /home/acellon/thesis/dataTrim.py chb19
 
