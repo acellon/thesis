@@ -101,7 +101,7 @@ class CHBfile:
         if self.rec is not None:
             print('EEG data:          (%d, %d) array' % self.rec.shape)
 
-    def plot(self, start=0, end=None, chStart=1, chEnd=23):
+    def plot(self, start=0, end=None, chList=list(range(23))):
         '''
         Modified from the Matplotlib example retrieved from:
         http://matplotlib.org/examples/pylab_examples/mri_with_eeg.html
@@ -111,6 +111,8 @@ class CHBfile:
             end     | :int: | plot end time (default: length of rec)
             chStart | :int: | first channel to plot (default: 1)
             chEnd   | :int: | last channel to plot (default: 23)
+
+        Note: traces build up from bottom (in reverse to preserve order)
         '''
 
         rec = self.get_rec()
@@ -120,14 +122,13 @@ class CHBfile:
             end = int(endhz / 256)
         else:
             endhz = end * 256
-        subrec = rec[(chStart - 1):chEnd, starthz:endhz]
+        subrec = rec[chList, starthz:endhz]
         (numRows, numSamples) = subrec.shape
 
         fig = plt.figure(figsize=(12, 9))
         ax = fig.add_subplot(111, title='%s plot' % self.get_name())
         t = np.arange(starthz, endhz) / 256.0
 
-        # Set x size and ticks, y size
         ticklocs = []
         ticksec = end - start
         if ticksec > 1000:
@@ -150,11 +151,10 @@ class CHBfile:
         y1 = (numRows - 1) * traceheight + tracemax
         ax.set_ylim(y0, y1)
 
-        # Add traces for each channel
         traces = []
         for i in range(numRows):
             traces.append(
-                np.hstack((t[:, np.newaxis], subrec[i, :, np.newaxis])))
+                np.hstack((t[:, np.newaxis], subrec[-i - 1, :, np.newaxis])))
             ticklocs.append(i * traceheight)
 
         offsets = np.zeros((numRows, 2), dtype=float)
@@ -169,8 +169,9 @@ class CHBfile:
             'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9', 'FT9-FT10',
             'FT10-T8', 'T8-P8'
         ]
+        yticks = [yticks[i] for i in chList]
         ax.set_yticks(ticklocs)
-        ax.set_yticklabels(yticks[(chStart - 1):chEnd])
+        ax.set_yticklabels(yticks[::-1])
 
         ax.set_xlabel('Time (s)')
 
@@ -206,7 +207,6 @@ class CHBsubj(list):
     Functions - helper:
         info()      displays humean-readable information about CHBsubj object
     '''
-
 
     def __init__(self, name):
         self.name = name
