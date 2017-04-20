@@ -5,7 +5,7 @@
 #
 # Data types for CHB-MIT EEG data files and associated functions for loading,
 # plotting, and labelling data.
-################################################################################
+###############################################################################
 from __future__ import print_function
 
 import numpy as np
@@ -168,11 +168,21 @@ class CHBfile:
     def get_num(self):
         return len(self.ict_idx)
 
-    def is_ict(self, idx):
+    def is_idx_ict(self, idx):
         for start, stop in self.ict_idx:
             if (start <= idx <= stop):
                 return True
         return False
+
+    def is_list_ict(self, idx_list):
+        output = []
+        for idx in idx_list:
+            for start, stop in self.ict_idx:
+                if (start <= idx <= stop):
+                    output.append(True)
+                else:
+                    output.append(False)
+        return output
 
     def copy_meta(self):
         copy = CHBfile(self.name)
@@ -498,3 +508,21 @@ def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
     shuffle_in_unison(train, trainlab)
     shuffle_in_unison(test, testlab)
     return train, trainlab, test, testlab
+
+
+def make_epoch(subj): #, testnum, trainlen=1000, testlen=100):
+    epoch_len = 256 * 5
+    train, trainlab, test, testlab = [], [], [], []
+    for eeg in subj:
+        eeg_len = eeg.get_rec().shape[1]
+        for st in range(0, eeg_len - epoch_len, 256):
+            epoch = eeg.get_rec()[:, st:(st + epoch_len)]
+            train.append(epoch)
+            st_sec = int(st / 256)
+            ep_range = range(st_sec, st_sec + 5)
+            trainlab.append(int(any(eeg.is_list_ict(ep_range))))
+
+    train = np.asarray(train, dtype='float64')
+    train = np.expand_dims(train, axis=1)
+    trainlab = np.asarray(trainlab, dtype='int32')
+    return train, trainlab

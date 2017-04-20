@@ -20,10 +20,6 @@ from lasagne import layers
 from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid
 from lasagne.objectives import binary_crossentropy, binary_accuracy
 
-# TODO: Early stopping
-# TODO: save network params?
-# TODO: tune like a mofo!!!
-
 # ##################### Build the neural network model #######################
 
 
