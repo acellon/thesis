@@ -6,5 +6,7 @@ import chb
 subject = chb.load_dataset('chb01', tiger=True)
 train, trainlab = chb.make_epoch(subject)
 
+print(train.shape)
 print(train)
+print(trainlab.shape)
 print(trainlab)

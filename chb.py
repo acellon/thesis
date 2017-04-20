@@ -512,10 +512,11 @@ def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
 
 def make_epoch(subj): #, testnum, trainlen=1000, testlen=100):
     epoch_len = 256 * 5
+    stride = epoch_len / 2
     train, trainlab, test, testlab = [], [], [], []
     for eeg in subj:
         eeg_len = eeg.get_rec().shape[1]
-        for st in range(0, eeg_len - epoch_len, 256):
+        for st in range(0, eeg_len - epoch_len, stride):
             epoch = eeg.get_rec()[:, st:(st + epoch_len)]
             train.append(epoch)
             st_sec = int(st / 256)
