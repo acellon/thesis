@@ -1,232 +1,248 @@
-#!/usr/bin/env python
-"""
-Trying out nolearn.Lasagne
-"""
+###############################################################################
+# File:      chbmit.py
+# Project:   Thesis
+# Author:    Adam Cellon
+#
+# Data types for CHB-MIT EEG data files and associated functions for loading,
+# plotting, and labelling data.
+###############################################################################
 
 from __future__ import print_function
-
-import sys
-import os
-import time
-import chb
-import matplotlib.pyplot as plt
-
 import numpy as np
-import theano
-import theano.tensor as T
+import matplotlib.pyplot as plt
+from matplotlib.collections import LineCollection
 
-import lasagne
-import nolearn
-from nolearn.lasagne import NeuralNet, TrainSplit
-from lasagne.layers import InputLayer, Conv2DLayer, MaxPool2DLayer, DenseLayer
-from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid
-from lasagne.objectives import binary_crossentropy, binary_accuracy
-
-# TODO: Early stopping
-# TODO: save network params?
-# TODO: tune like a mofo!!!
-
-# ################## Download and prepare the CHBMIT dataset ##################
-# Loads data for a certain subject (taken as a string 'chbXX').
+############################ CHB-MIT record datatype ##########################
 
 
-def load_dataset(subjname, exthd=False, tiger=False):
-    # Load data for subject
-    subject = chb.CHBsubj()
-    subject.load_meta(subjname, tiger=tiger)
-    subject.load_data(exthd=exthd, tiger=tiger)
-    return subject
+class CHBfile:
+    '''
+    Dataype for EEG records from the CHB-MIT dataset, available via PhysioBank
+    at https://physionet.org/pn6/chbmit/. One CHBfile object corresponds to one
+    .edf file in the database.
+
+    Initialization:
+        chbfile = CHBfile(name)
+
+    Attributes:
+        name     | :string:   | name of .edf file (e.g. 'chb01_05')
+        rec      | :ndarray:  | 23 channel EEG recording
+        ict_idx  | :[tuple]:  | list of (start, stop) indices of seizure events
+
+    Functions - setting:
+        add_szr(tuple)
+        add_rec(ndarray)
+
+    Functions - getting:
+        get_name() returns :string: name
+        get_rec()  returns :ndarray: rec
+        get_num()  returns :int: number of seizures
+        get_ict()  returns :[tuple]: list of seizure indices
+
+    Functions - helper:
+        is_ict(idx) returns :bool: does idx include a seizure event
+        copy_meta() returns :CHBfile: copy, excluding rec
+        info()      displays humean-readable information about CHBfile object
+        plot(...)   displays plot of file - see comment below for parameters
+    '''
+
+    def __init__(self, name):
+        self.name = name
+        self.rec = None
+        self.ict_idx = []
+
+    def __repr__(self):
+        return '%r' % (self.__dict__)
+
+    def add_szr(self, seizure):
+        self.ict_idx.append(seizure)
+
+    def add_rec(self, rec):
+        self.rec = rec
+
+    def get_name(self):
+        return self.name
+
+    def get_rec(self):
+        return self.rec
+
+    def get_num(self):
+        return len(self.ict_idx)
+
+    def get_ict(self):
+        return self.ict_idx
+
+    def is_idx_ict(self, idx):
+        for start, stop in self.ict_idx:
+            if (start <= idx <= stop):
+                return True
+        return False
+
+    def is_list_ict(self, idx_list):
+        output = []
+        for idx in idx_list:
+            for start, stop in self.get_ict():
+                if (start <= idx <= stop):
+                    output.append(True)
+                else:
+                    output.append(False)
+        return output
+
+    def copy_meta(self):
+        copy = CHBfile(self.name)
+        copy.ict_idx = self.get_ict()
+        return copy
+
+    def info(self):
+        print('Name:              %s' % self.name)
+        print('Seizure Count:     %d' % self.get_num())
+        for j in range(self.get_num()):
+            print('-Seizure %d idx:    %s' % (j + 1, self.ict_idx[j]))
+        if self.rec is not None:
+            print('EEG data:          (%d, %d) array' % self.rec.shape)
+
+    def plot(self, start=0, end=None, chStart=1, chEnd=23):
+        '''
+        Modified from the Matplotlib example retrieved from:
+        http://matplotlib.org/examples/pylab_examples/mri_with_eeg.html
+
+        Parameters:
+            start   | :int: | plot start time (default: 0)
+            end     | :int: | plot end time (default: length of rec)
+            chStart | :int: | first channel to plot (default: 1)
+            chEnd   | :int: | last channel to plot (default: 23)
+        '''
+
+        rec = self.get_rec()
+        starthz = start * 256
+        if end is None:
+            endhz = rec.shape[1]
+            end = int(endhz / 256)
+        else:
+            endhz = end * 256
+        subrec = rec[(chStart - 1):chEnd, starthz:endhz]
+        (numRows, numSamples) = subrec.shape
+
+        fig = plt.figure(figsize=(12, 9))
+        ax = fig.add_subplot(111, title='%s plot' % self.get_name())
+        t = np.arange(starthz, endhz) / 256.0
+
+        # Set x size and ticks, y size
+        ticklocs = []
+        ticksec = end - start
+        if ticksec > 1000:
+            tickdiff = 180
+        elif ticksec > 500:
+            tickdiff = 30
+        elif ticksec > 100:
+            tickdiff = 10
+        elif ticksec > 30:
+            tickdiff = 5
+        else:
+            tickdiff = 1
+
+        ax.set_xlim(start, end)
+        ax.set_xticks(np.arange(start, end + 1, tickdiff))
+        tracemin = subrec.min()
+        tracemax = subrec.max()
+        traceheight = (tracemax - tracemin) * 0.7  # Crowd them a bit.
+        y0 = tracemin
+        y1 = (numRows - 1) * traceheight + tracemax
+        ax.set_ylim(y0, y1)
+
+        # Add traces for each channel
+        traces = []
+        for i in range(numRows):
+            traces.append(
+                np.hstack((t[:, np.newaxis], subrec[i, :, np.newaxis])))
+            ticklocs.append(i * traceheight)
+
+        offsets = np.zeros((numRows, 2), dtype=float)
+        offsets[:, 1] = ticklocs
+
+        lines = LineCollection(traces, offsets=offsets, transOffset=None)
+        ax.add_collection(lines)
+
+        yticks = [
+            'FP1-F7', 'F7-T7', 'T7-P7', 'P7-O1', 'FP1-F3', 'F3-C3', 'C3-P3',
+            'P3-O1', 'FP2-F4', 'F4-C4', 'C4-P4', 'P4-O2', 'FP2-F8', 'F8-T8',
+            'T8-P8', 'P8-O2', 'FZ-CZ', 'CZ-PZ', 'P7-T7', 'T7-FT9', 'FT9-FT10',
+            'FT10-T8', 'T8-P8'
+        ]
+        ax.set_yticks(ticklocs)
+        ax.set_yticklabels(yticks[(chStart - 1):chEnd])
+
+        ax.set_xlabel('Time (s)')
+
+        plt.tight_layout()
+        plt.show()
 
 
-# ##################### Build the neural network model #######################
+############################ CHB Subject data type ############################
 
 
-def scratch_net(input_var, data_size=(None, 1, 23, 256), output_size=1):
-    net = {}
-    net['data'] = layers.InputLayer(data_size, input_var=input_var)
-    net['conv1'] = layers.Conv2DLayer(
-        net['data'],
-        num_filters=4,
-        filter_size=(1, 7),
-        pad='same',
-        nonlinearity=rectify)
-    net['conv2'] = layers.Conv2DLayer(
-        net['conv1'],
-        num_filters=8,
-        filter_size=(1, 15),
-        pad='same',
-        stride=(1, 2),
-        nonlinearity=rectify)
-    net['pool'] = layers.MaxPool2DLayer(net['conv2'], pool_size=(1, 2))
-    net['fcl'] = layers.DenseLayer(
-        net['pool'], num_units=256, nonlinearity=rectify)
-    net['out'] = layers.DenseLayer(
-        net['fcl'], num_units=output_size, nonlinearity=sigmoid)
-    return net
+class CHBsubj(list):
+    '''
+    Modified list for subject data from the CHB-MIT dataset. One CHBsubj object
+    contains the (meta)data for a single subject in the dataset, built up of
+    many .edf files.
+
+    Initialization:
+        chbsubj = CHBsubj(name)
+
+    Attributes:
+        name     | :string:  | name of subject (e.g. 'chb09')
+        seizures | :[tuple]: | list of indices of all seizure events for subject
+
+    Functions - setting:
+        add_file(CHBfile)
+
+    Functions - getting:
+        get_name() returns :string: name
+        get_num()  returns :int: total number of seizures
+        get_ict()  returns :[tuple]: list of seizure indices
+        get_file(fname)  returns :CHBfile: indexed by CHBfile.name
+
+    Functions - helper:
+        info()      displays humean-readable information about CHBsubj object
+    '''
 
 
-def scratch_model(input_var, target_var, net):
+    def __init__(self, name):
+        self.name = name
+        self.seizures = []
 
-    prediction = layers.get_output(net['out'])
-    loss = binary_crossentropy(prediction, target_var)
-    loss = lasagne.objectives.aggregate(loss)
+    def add_file(self, chbfile):
+        self.append(chbfile)
+        for seizure in chbfile.ict_idx:
+            self.seizures.append((chbfile.get_name(), seizure))
 
-    params = layers.get_all_params(net['out'], trainable=True)
-    updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
+    def get_name(self):
+        return self.name
 
-    test_prediction = layers.get_output(net['out'], deterministic=True)
+    def get_num(self):
+        return len(self.seizures)
 
-    test_loss = binary_crossentropy(test_prediction, target_var)
-    test_loss = lasagne.objectives.aggregate(test_loss)
-    test_acc = T.mean(
-        binary_accuracy(test_prediction, target_var),
-        dtype=theano.config.floatX)
+    def get_ict(self):
+        return self.seizures
 
-    train_fn = theano.function(
-        [input_var, target_var],
-        loss,
-        updates=updates,
-        allow_input_downcast=True)
-    val_fn = theano.function(
-        [input_var, target_var], [test_loss, test_acc],
-        allow_input_downcast=True)
+    def get_file(self, fname):
+        for chbfile in self:
+            if fname == chbfile.get_name():
+                return chbfile
 
-    return train_fn, val_fn
+    def info(self):
+        seiz = self.get_ict()
+        for i in range(self.get_num()):
+            print('   -Seizure %d: %s %s' % (i + 1, seiz[i][0], seiz[i][1]))
+        sdur, tdur = 0, 0
+        for _, (start, stop) in seiz:
+            sdur += (stop - start)
+        for eeg in self:
+            tdur += (eeg.get_rec().shape[1]) / 256
+        sper = (sdur / tdur) * 100
 
-
-def scratch_train(train_fn, val_fn, num_epochs):
-    train_err_list = []
-    val_err_list = []
-    val_acc_list = []
-
-    print('=' * 80)
-    print('| epoch \t| train loss\t| val loss\t| val acc\t| time\t')
-    print('=' * 80)
-
-    for epoch in range(num_epochs):
-        st = time.time()
-        batch_train_errs = []
-        for batch in iterate_minibatches(x_train, y_train, batch_size):
-            inputs, targets = batch
-            err = train_fn(inputs, targets)
-            batch_train_errs.append(err)
-        epoch_train_err = np.mean(batch_train_errs)
-        train_err_list.append(epoch_train_err)
-
-        batch_val_errs = []
-        batch_val_accs = []
-        for batch in iterate_minibatches(x_val, y_val, batch_size):
-            inputs, targets = batch
-            err, acc = val_fn(inputs, targets)
-            batch_val_errs.append(err)
-            batch_val_accs.append(acc)
-        epoch_val_err = np.mean(batch_val_errs)
-        val_err_list.append(epoch_val_err)
-        epoch_val_acc = np.mean(batch_val_accs)
-        val_acc_list.append(epoch_val_acc)
-
-        en = time.time()
-        print('| %d \t\t| %.6f\t| %.6f\t| %.2f%%\t| %.2f s' %
-              (epoch + 1, epoch_train_err, epoch_val_err, epoch_val_acc * 100,
-               en - st))
-    print('-' * 80)
-    return train_err_list, val_err_list, val_acc_list
-
-
-def scratch_test(val_fn):
-    print('Test Results:')
-    print('=' * 80)
-
-    batch_err = []
-    batch_acc = []
-    for batch in iterate_minibatches(x_test, y_test, batch_size):
-        inputs, targets = batch
-        err, acc = val_fn(inputs, targets)
-        batch_err.append(err)
-        batch_acc.append(acc)
-
-    test_err = np.mean(batch_err)
-    test_acc = np.mean(batch_acc)
-
-    print('Test loss: %.6f' % test_err)
-    print('Test accuracy: %.2f' % (test_acc * 100))
-    print('-' * 80)
-    return test_err, test_acc
-
-
-# ############################# Batch iterator ###############################
-
-
-def iterate_minibatches(inputs, targets, batchsize):
-    assert len(inputs) == len(targets)
-    for start_idx in range(0, len(inputs) - batchsize + 1, batchsize):
-        excerpt = slice(start_idx, start_idx + batchsize)
-        yield inputs[excerpt], targets[excerpt]
-
-
-# ############################## Main program ################################
-
-if len(sys.argv) > 1:
-    subject = sys.argv[1]
-else:
-    subject = 'chb01'
-if len(sys.argv) > 2:
-    num_epochs = int(sys.argv[2])
-else:
-    num_epochs = 50
-if len(sys.argv) > 3:
-    tiger = bool(sys.argv[3])
-else:
-    tiger = False
-if len(sys.argv) > 4:
-    plotter = bool(sys.argv[4])
-else:
-    plotter = False
-
-# Load the dataset
-subj = load_dataset(subject, tiger=tiger)
-sys.stdout.flush()
-
-num = subj.get_num()
-test_accs = []
-
-layers0 = [
-    (InputLayer, {'shape': (None, 1, 23, 256)}),
-
-    (Conv2DLayer, {'num_filters': 4, 'filter_size': (1, 7), 'pad': 'same',
-                   'nonlinearity': rectify}),
-    (Conv2DLayer, {'num_filters': 8, 'filter_size': (1, 15), 'pad': 'same',
-                   'nonlinearity': rectify}),
-    (MaxPool2DLayer, {'pool_size': (1, 2)}),
-
-    (DenseLayer, {'num_units': 256, 'nonlinearity': rectify}),
-    (DenseLayer, {'num_units': 1, 'nonlinearity': sigmoid}),
-]
-
-net0 = NeuralNet(
-    layers=layers0,
-    max_epochs=10,
-
-    update=lasagne.updates.rmsprop,
-    update_learning_rate=1e-5,
-
-    train_split=TrainSplit(eval_size=0.1),
-    verbose=1,
-    objective_loss_function=binary_crossentropy,
-)
-
-x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, 1)
-net0.fit(x_train, y_train)
-
-
-
-# print('=' * 80)
-# print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
-#       (num, np.mean(test_accs)))
-# Optionally, you could now dump the network weights to a file like this:
-# np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
-#
-# And load them again later on like this:
-# with np.load('model.npz') as f:
-#     param_values = [f['arr_%d' % i] for i in range(len(f.files))]
-# lasagne.layers.set_all_param_values(network, param_values)
+        print('Subject: %s' % self[0].get_name().split('_')[0])
+        print(' Number of files:    %d' % len(self))
+        print(' Number of seizures: %d' % self.get_num())
+        print(' Total seizure duration: %d s (%f%%)' % (sdur, sper))
