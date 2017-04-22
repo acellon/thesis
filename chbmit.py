@@ -72,21 +72,14 @@ class CHBfile:
     def get_ict(self):
         return self.ict_idx
 
-    def is_idx_ict(self, idx):
-        for start, stop in self.ict_idx:
-            if (start <= idx <= stop):
-                return True
+    def is_ict(self, idx):
+        if type(idx) is int:
+            idx = [idx]
+        for i in idx:
+            for start, stop in self.ict_idx:
+                if (start <= i <= stop):
+                    return True
         return False
-
-    def is_list_ict(self, idx_list):
-        output = []
-        for idx in idx_list:
-            for start, stop in self.get_ict():
-                if (start <= idx <= stop):
-                    output.append(True)
-                else:
-                    output.append(False)
-        return output
 
     def copy_meta(self):
         copy = CHBfile(self.name)
@@ -193,7 +186,8 @@ class CHBsubj(list):
 
     Attributes:
         name     | :string:  | name of subject (e.g. 'chb09')
-        seizures | :[tuple]: | list of indices of all seizure events for subject
+        seizures | :[(string, tuple)]: | list of indices of all seizure events
+                                         for subject
 
     Functions - setting:
         add_file(CHBfile)

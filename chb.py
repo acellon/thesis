@@ -32,7 +32,7 @@ def shuffle_in_unison(a, b):
     np.random.shuffle(a)
     np.random.set_state(rng_state)
     np.random.shuffle(b)
-    return None
+    return rng_state
 
 
 ############################# Loading functions ###############################
@@ -277,8 +277,8 @@ def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
     test = np.expand_dims(test, axis=1)
     testlab = np.asarray(testlab, dtype='int32')
 
-    shuffle_in_unison(train, trainlab)
-    shuffle_in_unison(test, testlab)
+    rng_train = shuffle_in_unison(train, trainlab)
+    rng_test = shuffle_in_unison(test, testlab)
     return train, trainlab, test, testlab
 
 
@@ -293,9 +293,73 @@ def make_epoch(subj):
             train.append(epoch)
             st_sec = int(st / 256)
             ep_range = range(st_sec, st_sec + 5)
-            trainlab.append(int(any(eeg.is_list_ict(ep_range))))
+            trainlab.append(int(any(eeg.is_ict(ep_range))))
 
     train = np.asarray(train, dtype='float64')
     train = np.expand_dims(train, axis=1)
     trainlab = np.asarray(trainlab, dtype='int32')
     return train, trainlab
+
+def loo_epoch(subj, testnum, testlen=100):
+    '''
+    # TODO: change this from a random sampling to the test array being
+            a straight-up chunk lifted from the data.
+            If it's alone in a file, take the whole file.
+            If it's not, break the file into pieces.
+            Think about normalizing length of training streams. They should
+            be relatively similar across the board, though maybe don't need
+            to be exact.
+
+            This still requires us to figure out how to make the whole
+            prediction thing work, but that can be the next step - this
+            should be first.
+
+            Training data should still be shuffled - we don't want the
+            evolution of the weights to be screwed up by a long period of
+            negative outputs... (I think?) -> I think this might be wrong.
+    '''
+    loofile, (ictstart, ictstop) = subj.get_ict()[testnum - 1]
+    loofile_len = subj.get_file(loofile).get_rec().shape[1]
+    if ictstart < 500:
+        loostart = 0
+        loostop = loostart + 1000
+    elif ictstop > loofile_len - 505:
+        loostop = loofile_len - 6
+        loostart = loostop - 1000
+    else:
+        loostart = ictstart - 500
+        loostop = loostart + 1000
+    epoch_len = 256 * 5
+    stride = epoch_len / 5
+    train, trainlab, test, testlab = [], [], [], []
+    for eeg in subj:
+        eeg_len = eeg.get_rec().shape[1]
+
+        if (loofile == eeg.get_name()):
+            for st in range(0, eeg_len - epoch_len, stride):
+                epoch = eeg.get_rec()[:, st:(st + epoch_len)]
+                st_sec = int(st / 256)
+                ep_range = range(st_sec, st_sec + 5)
+                ep_label = int(eeg.is_ict(ep_range))
+                if (loostart <= st_sec <= loostop):
+                    test.append(epoch)
+                    testlab.append(ep_label)
+                else:
+                    train.append(epoch)
+                    trainlab.append(int(eeg.is_ict(ep_range)))
+        else:
+            for st in range(0, eeg_len - epoch_len, stride):
+                epoch = eeg.get_rec()[:, st:(st + epoch_len)]
+                st_sec = int(st / 256)
+                ep_range = range(st_sec, st_sec + 5)
+                ep_label = int(eeg.is_ict(ep_range))
+                train.append(epoch)
+                trainlab.append(ep_label)
+
+    train = np.asarray(train, dtype='float64')
+    train = np.expand_dims(train, axis=1)
+    trainlab = np.asarray(trainlab, dtype='int32')
+    test = np.asarray(test, dtype='float64')
+    test = np.expand_dims(test, axis=1)
+    testlab = np.asarray(testlab, dtype='int32')
+    return train, trainlab, test, testlab
