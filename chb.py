@@ -8,6 +8,7 @@
 ###############################################################################
 from __future__ import print_function
 import chbmit
+from chbmit import CHBsubj, CHBfile
 import numpy as np
 import scipy.io as sio
 import os
