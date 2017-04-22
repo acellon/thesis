@@ -21,37 +21,37 @@ def main(subjname, compressed=True):
     op5 = set(['chb11'])
     op6 = set(['chb04'])
     op7 = set(['chb09'])
-    
+
     if subjname in op1:
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
     elif subjname in op2:
         del subject[0]
-        newsubj = chb.CHBsubj()
+        newsubj = chb.CHBsubj(subject.get_name())
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
             newEEG = eeg.copy_meta()
-            newsubj.append(newEEG)
+            newsubj.add_file(newEEG)
         pklname = pth + subjname + '.p'
         os.remove(pklname)
         pickle.dump(newsubj, open(pklname, 'wb'))
     elif subjname in op3:
         del subject[-1]
-        newsubj = chb.CHBsubj()
+        newsubj = chb.CHBsubj(subject.get_name())
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
             newEEG = eeg.copy_meta()
-            newsubj.append(newEEG)
+            newsubj.add_file(newEEG)
         pklname = pth + subjname + '.p'
         os.remove(pklname)
         pickle.dump(newsubj, open(pklname, 'wb'))
     elif subjname in op4:
         del subject[-2:]
-        newsubj = chb.CHBsubj()
+        newsubj = chb.CHBsubj(subject.get_name())
         for eeg in subject:
             eeg.add_rec(np.delete(eeg.get_rec(), [4, 9, 12, 17, 22], 0))
             newEEG = eeg.copy_meta()
-            newsubj.append(newEEG)
+            newsubj.add_file(newEEG)
         pklname = pth + subjname + '.p'
         os.remove(pklname)
         pickle.dump(newsubj, open(pklname, 'wb'))
@@ -70,7 +70,7 @@ def main(subjname, compressed=True):
             if not idx:
                 continue
             eeg.add_rec(np.delete(eeg.get_rec(), 23, 0))
-    
+
     print('Saving...')
     savedict = {}
     for eeg in subject:

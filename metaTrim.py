@@ -1,8 +1,5 @@
 import chb
-import os
 import sys
-import time
-import numpy as np
 try:
     import cPickle as pickle
 except:

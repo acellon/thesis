@@ -342,7 +342,7 @@ def loo_epoch(subj, testnum, testlen=100):
                 st_sec = int(st / 256)
                 ep_range = range(st_sec, st_sec + 5)
                 ep_label = int(eeg.is_ict(ep_range))
-                if (loostart <= st_sec <= loostop):
+                if (loostart <= st_sec < loostop):
                     test.append(epoch)
                     testlab.append(ep_label)
                 else:
