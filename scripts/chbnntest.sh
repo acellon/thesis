@@ -5,10 +5,10 @@
 #SBATCH --error=chbnn.e%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=00:10:00
+#SBATCH --time=00:45:00
 #SBATCH --workdir=/home/acellon/thesis
-#SBATCH --gres=gpu:1
-#SBATCH --mem=32G
+
+#SBATCH --mem=60GB
 #SBATCH --mail-type=end
 #SBATCH --mail-user=acellon@princeton.edu
 
@@ -18,4 +18,4 @@ export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 module load anaconda
 module load cudatoolkit
 module load intel-mkl
-python ./chbnn.py chb09 5 True
+python ./chbnn.py chb01 5 True

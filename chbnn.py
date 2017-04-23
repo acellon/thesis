@@ -61,6 +61,7 @@ def big_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
         net['conv1'],
         num_filters=8,
         filter_size=(1, 127),
+        pad='same',
         stride=(1, 32),
         nonlinearity=rectify)
     net['pool'] = layers.MaxPool2DLayer(net['conv2'], pool_size=(1, 2))
@@ -197,9 +198,9 @@ num = subj.get_num()
 test_accs = []
 for szr in range(1, num + 1):
     print('\nLeave-One-Out: %d of %d' % (szr, num))
-    x_train, y_train, x_test, y_test = chb.loo_epoch(subj, szr)
+    x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, szr)
     val_size = int(y_train.shape[0]/10)
-    chb.shuffle_in_unison(x_train, y_train)
+    #chb.shuffle_in_unison(x_train, y_train)
     x_train, x_val = x_train[:-val_size], x_train[-val_size:]
     y_train, y_val = y_train[:-val_size], y_train[-val_size:]
 
@@ -207,7 +208,7 @@ for szr in range(1, num + 1):
 
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
-    net = big_net(input_var)
+    net = scratch_net(input_var)
     train_fn, val_fn = scratch_model(input_var, target_var, net)
 
     train_err, val_err, val_acc = scratch_train(train_fn, val_fn, num_epochs)
