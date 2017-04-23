@@ -320,22 +320,22 @@ def loo_epoch(subj, testnum, testlen=100):
             negative outputs... (I think?) -> I think this might be wrong.
     '''
     loofile, (ictstart, ictstop) = subj.get_ict()[testnum - 1]
-    loofile_len = int(subj.get_file(loofile).get_rec().shape[1]/256)
+    loofile_len = subj.get_file(loofile).get_rec().shape[1]
     if ictstart < 500:
         loostart = 0
         loostop = loostart + 1000
     elif ictstop > loofile_len - 505:
-        loostop = loofile_len - 5
+        loostop = loofile_len - 6
         loostart = loostop - 1000
     else:
         loostart = ictstart - 500
         loostop = loostart + 1000
     epoch_len = 256 * 5
-    stride = epoch_len / 2
+    stride = epoch_len / 5
     train, trainlab, test, testlab = [], [], [], []
     for eeg in subj:
         eeg_len = eeg.get_rec().shape[1]
-    
+
         if (loofile == eeg.get_name()):
             for st in range(0, eeg_len - epoch_len, stride):
                 epoch = eeg.get_rec()[:, st:(st + epoch_len)]

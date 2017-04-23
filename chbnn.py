@@ -47,6 +47,30 @@ def scratch_net(input_var, data_size=(None, 1, 23, 256), output_size=1):
     return net
 
 
+def big_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
+    net = {}
+    net['data'] = layers.InputLayer(data_size, input_var=input_var)
+    net['conv1'] = layers.Conv2DLayer(
+        net['data'],
+        num_filters=8,
+        filter_size=(1, 255),
+        stride=(1, 32),
+        pad='same',
+        nonlinearity=rectify)
+    net['conv2'] = layers.Conv2DLayer(
+        net['conv1'],
+        num_filters=8,
+        filter_size=(1, 127),
+        stride=(1, 32),
+        nonlinearity=rectify)
+    net['pool'] = layers.MaxPool2DLayer(net['conv2'], pool_size=(1, 2))
+    net['fcl'] = layers.DenseLayer(
+        net['pool'], num_units=256, nonlinearity=rectify)
+    net['out'] = layers.DenseLayer(
+        net['fcl'], num_units=output_size, nonlinearity=sigmoid)
+    return net
+
+
 def scratch_model(input_var, target_var, net):
 
     prediction = layers.get_output(net['out'])
@@ -173,15 +197,17 @@ num = subj.get_num()
 test_accs = []
 for szr in range(1, num + 1):
     print('\nLeave-One-Out: %d of %d' % (szr, num))
-    x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, szr)
-    x_train, x_val = x_train[:-100], x_train[-100:]
-    y_train, y_val = y_train[:-100], y_train[-100:]
+    x_train, y_train, x_test, y_test = chb.loo_epoch(subj, szr)
+    val_size = int(y_train.shape[0]/10)
+    chb.shuffle_in_unison(x_train, y_train)
+    x_train, x_val = x_train[:-val_size], x_train[-val_size:]
+    y_train, y_val = y_train[:-val_size], y_train[-val_size:]
 
     batch_size = 10
 
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
-    net = scratch_net(input_var)
+    net = big_net(input_var)
     train_fn, val_fn = scratch_model(input_var, target_var, net)
 
     train_err, val_err, val_acc = scratch_train(train_fn, val_fn, num_epochs)
