@@ -4,11 +4,9 @@
 #SBATCH --output=epochtest.o%j
 #SBATCH --error=epochtest.e%j
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
 #SBATCH --time=00:30:00
 #SBATCH --workdir=/home/acellon/thesis
-#SBATCH --gres=gpu:1
-#SBATCH --mem=32G
+#SBATCH --mem=60G
 #SBATCH --mail-type=end
 #SBATCH --mail-user=acellon@princeton.edu
 
@@ -18,5 +16,6 @@ export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 module load anaconda
 module load cudatoolkit
 module load intel-mkl
-python ./epochtest.py
+source activate /tigress/acellon/theano
+python ./epochtest.py chb16
 

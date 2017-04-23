@@ -1,0 +1,22 @@
+chb01 with 1-sec stride:    66.24GB
+chb01 with 2.5-sec stride:  22.24GB
+chb02 with 2.5-sec stride:   4.49GB
+chb03 with 2.5-sec stride:  27.99GB
+chb04 with 2.5-sec stride:  DID NOT WORK
+chb05 with 2.5-sec stride:  27.61GB
+chb06 with 2.5-sec stride:  52.20GB
+chb07 with 2.5-sec stride:  33.21GB
+chb08 with 2.5-sec stride:  13.12GB
+chb09 with 2.5-sec stride:  34.95GB
+chb10 with 2.5-sec stride:  32.73GB
+chb11 with 2.5-sec stride:  12.48GB
+chb14 with 2.5-sec stride:  19.68GB
+chb16 with 2.5-sec stride:  didn't work
+chb17 with 2.5-sec stride:   1.87MB (???)
+chb18 with 2.5-sec stride:   5.03GB
+chb19 with 2.5-sec stride:  17.49GB
+chb20 with 2.5-sec stride:  14.35GB
+chb21 with 2.5-sec stride:   4.49GB
+chb22 with 2.5-sec stride:  15.08GB
+chb23 with 2.5-sec stride:  16.02GB
+chb24 with 2.5-sec stride:   8.39GB
