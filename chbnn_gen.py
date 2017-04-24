@@ -237,7 +237,7 @@ for szr in range(1, num + 1):
             err = train_fn(x_train, y_train)
             batch_train_errs.append(err)
         epoch_train_err = np.mean(batch_train_errs)
-        train_err_lsit.append(epoch_train_err)
+        train_err_list.append(epoch_train_err)
 
         batch_val_errs = []
         batch_val_accs = []
