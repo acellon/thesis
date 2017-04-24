@@ -74,10 +74,8 @@ class CHBfile:
     def get_ict(self):
         return self.ict_idx
 
-    def is_ict(self, idx):
-        if type(idx) is int:
-            idx = [idx]
-        for i in idx:
+    def is_ict(self, idx, im_len=5):
+        for i in range(idx, idx + im_len):
             for start, stop in self.ict_idx:
                 if (start <= i <= stop):
                     return True

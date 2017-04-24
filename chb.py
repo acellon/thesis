@@ -35,6 +35,11 @@ def shuffle_in_unison(a, b):
     np.random.shuffle(b)
     return rng_state
 
+def to_hz(sec):
+    return int(sec * 256)
+
+def to_s(hz):
+    return int(hz / 256)
 
 ############################# Loading functions ###############################
 
@@ -293,8 +298,7 @@ def make_epoch(subj):
             epoch = eeg.get_rec()[:, st:(st + epoch_len)]
             train.append(epoch)
             st_sec = int(st / 256)
-            ep_range = range(st_sec, st_sec + 5)
-            trainlab.append(int(any(eeg.is_ict(ep_range))))
+            trainlab.append(int(eeg.is_ict(st_sec)))
 
     train = np.asarray(train, dtype='float64')
     train = np.expand_dims(train, axis=1)
@@ -340,20 +344,18 @@ def loo_epoch(subj, testnum, testlen=100):
             for st in range(0, eeg_len - epoch_len, stride):
                 epoch = eeg.get_rec()[:, st:(st + epoch_len)]
                 st_sec = int(st / 256)
-                ep_range = range(st_sec, st_sec + 5)
-                ep_label = int(eeg.is_ict(ep_range))
+                ep_label = int(eeg.is_ict(st_sec))
                 if (loostart <= st_sec < loostop):
                     test.append(epoch)
                     testlab.append(ep_label)
                 else:
                     train.append(epoch)
-                    trainlab.append(int(eeg.is_ict(ep_range)))
+                    trainlab.append(int(eeg.is_ict(st_sec)))
         else:
             for st in range(0, eeg_len - epoch_len, stride):
                 epoch = eeg.get_rec()[:, st:(st + epoch_len)]
-                st_sec = int(st / 256)
-                ep_range = range(st_sec, st_sec + 5)
-                ep_label = int(eeg.is_ict(ep_range))
+                st_sec = to_s(st)
+                ep_label = int(eeg.is_ict(st_sec))
                 train.append(epoch)
                 trainlab.append(ep_label)
 
@@ -364,3 +366,32 @@ def loo_epoch(subj, testnum, testlen=100):
     test = np.expand_dims(test, axis=1)
     testlab = np.asarray(testlab, dtype='int32')
     return train, trainlab, test, testlab
+
+def epoch_gen(subj, batchsec=10, shuffle=False):
+    batchhz = to_hz(batchsec)      # IN HZ
+    epochlen = to_hz(5)            # 5 sec epochs IN HZ
+    stride = to_hz(1)              # epochs start 1 sec apart IN HZ
+    for eeg in subj:
+        print(eeg.get_name())
+        datalen = eeg.get_rec().shape[1] # IN HZ
+        if shuffle:
+            indices = np.arange(datalen)
+            np.random.shuffle(indices)
+        epoch_list = []
+        label_list = []
+        for epochstart in range(0, datalen - epochlen + to_hz(1), stride):
+            if shuffle:
+                excerpt = indices[epochstart:epochstart + epochlen]
+                label = eeg.is_ict(to_s(excerpt[0]))
+            else:
+                excerpt = slice(epochstart, epochstart + epochlen)
+                label = eeg.is_ict(to_s(epochstart))
+            epoch_list.append(eeg.get_rec()[:,excerpt])
+            label_list.append(label)
+            if len(epoch_list) == batchsec:
+                print("Epoch start on yield: {}".format(to_s(epochstart)))
+                inputs = np.asarray(epoch_list, dtype='float64')
+                inputs = np.expand_dims(inputs, axis=1)
+                targets = np.asarray(label_list, dtype='int32')
+                epoch_list, label_list = [], []
+                yield inputs, targets
