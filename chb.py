@@ -35,11 +35,24 @@ def shuffle_in_unison(a, b):
     np.random.shuffle(b)
     return rng_state
 
+
 def to_hz(sec):
-    return int(sec * 256)
+    if type(sec) is int:
+        return int(sec * 256)
+    elif type(sec) is list:
+        return [int(s * 256) for s in sec]
+    elif type(sec) is np.ndarray:
+        return sec * 256
+
 
 def to_s(hz):
-    return int(hz / 256)
+    if type(hz) is int:
+        return int(hz / 256)
+    elif type(hz) is list:
+        return [int(hz / 256) for f in hz]
+    elif type(hz) is np.ndarray:
+        return hz / 256
+
 
 ############################# Loading functions ###############################
 
@@ -305,6 +318,7 @@ def make_epoch(subj):
     trainlab = np.asarray(trainlab, dtype='int32')
     return train, trainlab
 
+
 def loo_epoch(subj, testnum, testlen=100):
     '''
     # TODO: change this from a random sampling to the test array being
@@ -367,13 +381,13 @@ def loo_epoch(subj, testnum, testlen=100):
     testlab = np.asarray(testlab, dtype='int32')
     return train, trainlab, test, testlab
 
+
 def epoch_gen(subj, batchsec=10, shuffle=False):
-    batchhz = to_hz(batchsec)      # IN HZ
-    epochlen = to_hz(5)            # 5 sec epochs IN HZ
-    stride = to_hz(1)              # epochs start 1 sec apart IN HZ
+    batchhz = to_hz(batchsec)
+    epochlen = to_hz(5)
+    stride = to_hz(1)
     for eeg in subj:
-        print(eeg.get_name())
-        datalen = eeg.get_rec().shape[1] # IN HZ
+        datalen = eeg.get_rec().shape[1]
         if shuffle:
             indices = np.arange(datalen)
             np.random.shuffle(indices)
@@ -386,12 +400,65 @@ def epoch_gen(subj, batchsec=10, shuffle=False):
             else:
                 excerpt = slice(epochstart, epochstart + epochlen)
                 label = eeg.is_ict(to_s(epochstart))
-            epoch_list.append(eeg.get_rec()[:,excerpt])
+            epoch_list.append(eeg.get_rec()[:, excerpt])
             label_list.append(label)
             if len(epoch_list) == batchsec:
-                print("Epoch start on yield: {}".format(to_s(epochstart)))
                 inputs = np.asarray(epoch_list, dtype='float64')
                 inputs = np.expand_dims(inputs, axis=1)
                 targets = np.asarray(label_list, dtype='int32')
                 epoch_list, label_list = [], []
+                yield inputs, targets
+
+
+def loo_gen(subj, loonum, batchsec=10, shuffle=False):
+    batchhz = to_hz(batchsec)
+    imglen, stride = to_hz(5), to_hz(1)
+
+    looname, (ictstart, ictstop) = subj.get_ict()[loonum - 1]
+    loofile = subj.get_file(looname)
+    loofilelen_s = to_s(loofile.get_rec().shape[1])
+    if ictstart < 500:
+        loostart = 0
+        loostop = loostart + 1000
+    elif ictstop > loofilelen_s - 505:
+        loostop = loofilelen_s - 6
+        loostart = loostop - 1000
+    else:
+        loostart = ictstart - 500
+        loostop = loostart + 1000
+
+    testlist, testlabel = [], []
+    for start in range(loostart, loostop, to_s(stride)):
+        excerpt = loofile.get_rec()[:, to_hz(start):to_hz(start) + imglen]
+        testlist.append(excerpt)
+        testlabel.append(int(loofile.is_ict(start)))
+    inputs = np.asarray(testlist, dtype='float64')
+    inputs = np.expand_dims(inputs, axis=1)
+    targets = np.asarray(testlabel, dtype='int32')
+    yield inputs, targets
+
+    for eeg in subj:
+        eeglen = eeg.get_rec().shape[1]
+        if (eeg.get_name() == looname):
+            first = list(range(to_hz(loostart)))
+            last = list(range(to_hz(loostop), to_hz(loofilelen_s - 6)))
+            fullList = first + last
+            indices = np.asarray(fullList)
+        else:
+            indices = np.arange(eeglen)
+        if shuffle:
+            np.random.shuffle(indices)
+        indlen = len(indices)
+        imglist, lablist = [], []
+        for idx, start in enumerate(range(0, indlen - imglen, stride)):
+            excerpt = indices[start:start + imglen]
+            label = eeg.is_ict(excerpt[0])
+
+            imglist.append(eeg.get_rec()[:, excerpt])
+            lablist.append(label)
+            if len(imglist) == batchsec:
+                inputs = np.asarray(imglist, dtype='float64')
+                inputs = np.expand_dims(inputs, axis=1)
+                targets = np.asarray(lablist, dtype='int32')
+                imglist, lablist = [], []
                 yield inputs, targets
