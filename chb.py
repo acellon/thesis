@@ -289,10 +289,10 @@ def leaveOneOut(subj, testnum, trainlen=1000, testlen=100):
                 del trainlab[idx]
 
     # Return as co-shuffled numpy arrays
-    train = np.asarray(train, dtype='float64')
+    train = np.asarray(train, dtype='float32')
     train = np.expand_dims(train, axis=1)
     trainlab = np.asarray(trainlab, dtype='int32')
-    test = np.asarray(test, dtype='float64')
+    test = np.asarray(test, dtype='float32')
     test = np.expand_dims(test, axis=1)
     testlab = np.asarray(testlab, dtype='int32')
 
@@ -313,7 +313,7 @@ def make_epoch(subj):
             st_sec = int(st / 256)
             trainlab.append(int(eeg.is_ict(st_sec)))
 
-    train = np.asarray(train, dtype='float64')
+    train = np.asarray(train, dtype='float32')
     train = np.expand_dims(train, axis=1)
     trainlab = np.asarray(trainlab, dtype='int32')
     return train, trainlab
@@ -373,10 +373,10 @@ def loo_epoch(subj, testnum, testlen=100):
                 train.append(epoch)
                 trainlab.append(ep_label)
 
-    train = np.asarray(train, dtype='float64')
+    train = np.asarray(train, dtype='float32')
     train = np.expand_dims(train, axis=1)
     trainlab = np.asarray(trainlab, dtype='int32')
-    test = np.asarray(test, dtype='float64')
+    test = np.asarray(test, dtype='float32')
     test = np.expand_dims(test, axis=1)
     testlab = np.asarray(testlab, dtype='int32')
     return train, trainlab, test, testlab
@@ -403,7 +403,7 @@ def epoch_gen(subj, batchsec=10, shuffle=False):
             epoch_list.append(eeg.get_rec()[:, excerpt])
             label_list.append(label)
             if len(epoch_list) == batchsec:
-                inputs = np.asarray(epoch_list, dtype='float64')
+                inputs = np.asarray(epoch_list, dtype='float32')
                 inputs = np.expand_dims(inputs, axis=1)
                 targets = np.asarray(label_list, dtype='int32')
                 epoch_list, label_list = [], []
@@ -432,7 +432,7 @@ def loo_gen(subj, loonum, batchsec=10, shuffle=False):
         excerpt = loofile.get_rec()[:, to_hz(start):to_hz(start) + imglen]
         testlist.append(excerpt)
         testlabel.append(int(loofile.is_ict(start)))
-    inputs = np.asarray(testlist, dtype='float64')
+    inputs = np.asarray(testlist, dtype='float32')
     inputs = np.expand_dims(inputs, axis=1)
     targets = np.asarray(testlabel, dtype='int32')
     yield inputs, targets
@@ -457,7 +457,7 @@ def loo_gen(subj, loonum, batchsec=10, shuffle=False):
             imglist.append(eeg.get_rec()[:, excerpt])
             lablist.append(label)
             if len(imglist) == batchsec:
-                inputs = np.asarray(imglist, dtype='float64')
+                inputs = np.asarray(imglist, dtype='float32')
                 inputs = np.expand_dims(inputs, axis=1)
                 targets = np.asarray(lablist, dtype='int32')
                 imglist, lablist = [], []

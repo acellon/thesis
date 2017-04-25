@@ -32,7 +32,7 @@ def make_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
         stride=(1, 32),
         pad='same',
         nonlinearity=rectify)
-    net['conv2'] = layers.Conv2DLayer
+    net['conv2'] = layers.Conv2DLayer(
         net['conv1'],
         num_filters=8,
         filter_size=(1, 127),
@@ -153,7 +153,7 @@ for szr in range(1, num_szr + 1):
             x_test, y_test = batch
             break
         # separate val and train data
-        x_val = np.zeros((1000, 1, 23, 1280), dtype='float64')
+        x_val = np.zeros((1000, 1, 23, 1280), dtype='float32')
         y_val = np.zeros((1000), dtype='int32')
 
         x_train, y_train = 0, 0
@@ -207,7 +207,8 @@ for szr in range(1, num_szr + 1):
 
     test_err, test_acc = nn_test(x_test, y_test, val_fn)
     test_accs[szr - 1] = test_acc
-    sys.stdout.flush()
+    sys.stdout.fl
+ush()
 
 print('*' * 80)
 print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
