@@ -320,23 +320,6 @@ def make_epoch(subj):
 
 
 def loo_epoch(subj, testnum, testlen=100):
-    '''
-    # TODO: change this from a random sampling to the test array being
-            a straight-up chunk lifted from the data.
-            If it's alone in a file, take the whole file.
-            If it's not, break the file into pieces.
-            Think about normalizing length of training streams. They should
-            be relatively similar across the board, though maybe don't need
-            to be exact.
-
-            This still requires us to figure out how to make the whole
-            prediction thing work, but that can be the next step - this
-            should be first.
-
-            Training data should still be shuffled - we don't want the
-            evolution of the weights to be screwed up by a long period of
-            negative outputs... (I think?) -> I think this might be wrong.
-    '''
     loofile, (ictstart, ictstop) = subj.get_ict()[testnum - 1]
     loofile_len = subj.get_file(loofile).get_rec().shape[1]
     if ictstart < 500:
@@ -410,7 +393,12 @@ def epoch_gen(subj, batchsec=10, shuffle=False):
                 yield inputs, targets
 
 
-def loo_gen(subj, loonum, batchsec=10, shuffle=False):
+def loo_gen(subj, loonum, batchsec=10, max_num=None, shuffle=False):
+    '''
+    right now, we can throw out randomly to have a specific number of samples
+    per CHBfile...rather than across the whole subject. we'll have to think
+    about how to make that happen with a generator (UGH)
+    '''
     batchhz = to_hz(batchsec)
     imglen, stride = to_hz(5), to_hz(1)
 
@@ -437,8 +425,11 @@ def loo_gen(subj, loonum, batchsec=10, shuffle=False):
     targets = np.asarray(testlabel, dtype='int32')
     yield inputs, targets
 
+    ret_num = 0
     for eeg in subj:
         eeglen = eeg.get_rec().shape[1]
+        if max_num is None:
+            max_num = eeglen
         if (eeg.get_name() == looname):
             first = list(range(to_hz(loostart)))
             last = list(range(to_hz(loostop), to_hz(loofilelen_s - 6)))
@@ -453,12 +444,14 @@ def loo_gen(subj, loonum, batchsec=10, shuffle=False):
         for idx, start in enumerate(range(0, indlen - imglen, stride)):
             excerpt = indices[start:start + imglen]
             label = eeg.is_ict(excerpt[0])
-
-            imglist.append(eeg.get_rec()[:, excerpt])
-            lablist.append(label)
-            if len(imglist) == batchsec:
-                inputs = np.asarray(imglist, dtype='float32')
-                inputs = np.expand_dims(inputs, axis=1)
-                targets = np.asarray(lablist, dtype='int32')
-                imglist, lablist = [], []
-                yield inputs, targets
+            if label and ret_num < max_num:
+                ret_num += 1
+                imglist.append(eeg.get_rec()[:, excerpt])
+                lablist.append(label)
+                if len(imglist) == batchsec:
+                    inputs = np.asarray(imglist, dtype='float32')
+                    inputs = np.expand_dims(inputs, axis=1)
+                    targets = np.asarray(lablist, dtype='int32')
+                    imglist, lablist = [], []
+                    yield inputs, targets
+        max_num = None
