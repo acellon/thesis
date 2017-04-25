@@ -9,7 +9,6 @@ import sys
 import os
 import time
 import chb
-import matplotlib.pyplot as plt
 
 import numpy as np
 import theano
@@ -17,16 +16,14 @@ import theano.tensor as T
 
 import lasagne
 from lasagne import layers
-from lasagne.nonlinearities import rectify, leaky_rectify, softmax
+from lasagne.nonlinearities import rectify, leaky_rectify, softmax, sigmoid
 from lasagne.objectives import binary_crossentropy, binary_accuracy
 
 from nolearn.lasagne import NeuralNet
 from nolearn.lasagne import visualize
 import nolearn.lasagne
 
-from sklearn.metrics import classification_report, accuracy_score
-
-# ##################### Build the neural network model #######################
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, roc_auc_score
 
 # ############################# Batch iterator ###############################
 
@@ -63,7 +60,6 @@ sys.stdout.flush()
 batch_size = 10
 
 num_szr = subj.get_num()
-test_accs = [0] * num_szr
 for szr in range(1, num_szr + 1):
     print('\nLeave-One-Out: %d of %d' % (szr, num_szr))
 
@@ -105,45 +101,26 @@ for szr in range(1, num_szr + 1):
 
     net1.initialize()
 
-    x_test, y_test = 0, 0
     for epoch in range(num_epochs):
-        st = time.clock()
-        # make generator
         loo_gen = chb.loo_gen(subj, szr, 60, shuffle=True)
-        # get test data (same on every epoch, so not really using it until the
-        # last go-round)
+        x_test, y_test = 0, 0
         for batch in loo_gen:
             x_test, y_test = batch
             break
-        # separate val and train data
 
-        x_train, y_train = 0, 0
-        batch_train_errs = []
         for idx, batch in enumerate(loo_gen):
             x_train, y_train = batch
             net1.partial_fit(x_train, y_train)
 
-    if plotter:
-        fig = plt.figure()
-        plt.plot(range(num_epochs), train_err, label='Training error')
-        plt.plot(range(num_epochs), val_err, label='Validation error')
-        plt.title('ConvNet Training')
-        plt.xlabel('Epochs')
-        plt.ylabel('Error')
-        plt.legend()
-        plt.show()
-
-        fig2 = plt.figure()
-        plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
-        plt.title('ConvNet Training: Validation accuracy')
-        plt.xlabel('Epochs')
-        plt.ylabel('Accuracy')
-        plt.show()
-
     y_true, y_pred = y_test, net1.predict(x_test)
     print(classification_report(y_true, y_pred))
-    print(accuracy_score(y_true, y_pred))
-
+    print('Accuracy score:', accuracy_score(y_true, y_pred))
+    print('Confusion matrix:\n',confusion_matrix(y_true, y_pred))
+    print('ROC-AUC score:',roc_auc_score(y_true, y_pred))
+    print('Matthews Coeff:',matthews_corrcoef(y_true, y_pred))
+    print('y_pred vs y_true')
+    print(y_pred)
+    print(y_true)
 # Optionally, you could now dump the network weights to a file like this:
 # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
 #
