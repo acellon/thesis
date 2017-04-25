@@ -23,7 +23,7 @@ from nolearn.lasagne import NeuralNet
 from nolearn.lasagne import visualize
 import nolearn.lasagne
 
-from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, roc_auc_score
+from sklearn.metrics import classification_report, accuracy_score, confusion_matrix, roc_auc_score, matthews_corrcoef
 
 # ############################# Batch iterator ###############################
 
