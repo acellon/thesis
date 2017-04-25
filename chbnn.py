@@ -73,31 +73,46 @@ def big_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
 
 
 def scratch_model(input_var, target_var, net):
-
+    print('compiling loss')
+    sys.stdout.flush()
     prediction = layers.get_output(net['out'])
     loss = binary_crossentropy(prediction, target_var)
     loss = lasagne.objectives.aggregate(loss)
-
+    print('loss compiled')
+    print('compiling updates')
+    sys.stdout.flush()
     params = layers.get_all_params(net['out'], trainable=True)
     updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
-
+    print('updates compiled')
+    print('compiling test_loss')
+    sys.stdout.flush()
     test_prediction = layers.get_output(net['out'], deterministic=True)
-
+    
     test_loss = binary_crossentropy(test_prediction, target_var)
     test_loss = lasagne.objectives.aggregate(test_loss)
+    print('test_loss compiled')
+    print('compiling test_acc')
+    sys.stdout.flush()
     test_acc = T.mean(
         binary_accuracy(test_prediction, target_var),
         dtype=theano.config.floatX)
-
+    print('test_acc compiled')
+    print('compiling train_fn')
+    sys.stdout.flush()
     train_fn = theano.function(
         [input_var, target_var],
         loss,
-        updates=updates,
-        allow_input_downcast=True)
+        updates=updates
+        )
+    print('train_fn compiled')
+    print('compiling val_fn')
+    sys.stdout.flush()
     val_fn = theano.function(
-        [input_var, target_var], [test_loss, test_acc],
-        allow_input_downcast=True)
-
+        [input_var, target_var],
+        [test_loss, test_acc],
+        )
+    print('val_fn compiled')
+    sys.stdout.flush()
     return train_fn, val_fn
 
 
@@ -198,7 +213,10 @@ num = subj.get_num()
 test_accs = []
 for szr in range(1, num + 1):
     print('\nLeave-One-Out: %d of %d' % (szr, num))
-    x_train, y_train, x_test, y_test = chb.leaveOneOut(subj, szr)
+    sys.stdout.flush()
+    x_train, y_train, x_test, y_test = chb.loo_epoch(subj, szr)
+    print('L-O-O success')
+    sys.stdout.flush()
     val_size = int(y_train.shape[0]/10)
     #chb.shuffle_in_unison(x_train, y_train)
     x_train, x_val = x_train[:-val_size], x_train[-val_size:]
@@ -208,11 +226,17 @@ for szr in range(1, num + 1):
 
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
+    print('Theano variables made')
+    sys.stdout.flush()
     net = scratch_net(input_var)
+    print('Network made')
+    sys.stdout.flush()
     train_fn, val_fn = scratch_model(input_var, target_var, net)
-
+    print('Model compiled')
+    sys.stdout.flush()
     train_err, val_err, val_acc = scratch_train(train_fn, val_fn, num_epochs)
     print('Training Complete.\n')
+    sys.stdout.flush()
     if plotter:
         fig = plt.figure()
         plt.plot(range(num_epochs), train_err, label='Training error')
@@ -246,3 +270,4 @@ print()
 # with np.load('model.npz') as f:
 #     param_values = [f['arr_%d' % i] for i in range(len(f.files))]
 # lasagne.layers.set_all_param_values(network, param_values)
+ 
