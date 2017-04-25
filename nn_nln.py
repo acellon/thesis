@@ -28,74 +28,6 @@ from sklearn.metrics import classification_report, accuracy_score
 
 # ##################### Build the neural network model #######################
 
-def make_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
-    net = {}
-    net['data'] = layers.InputLayer(data_size, input_var=input_var)
-    net['conv1'] = layers.Conv2DLayer(
-        net['data'],
-        num_filters=8,
-        filter_size=(1, 255),
-        stride=(1, 32),
-        pad='same',
-        nonlinearity=rectify)
-    net['conv2'] = layers.Conv2DLayer(
-        net['conv1'],
-        num_filters=8,
-        filter_size=(1, 127),
-        pad='same',
-        stride=(1, 32),
-        nonlinearity=rectify)
-    net['pool'] = layers.MaxPool2DLayer(net['conv2'], pool_size=(1, 2))
-    net['fcl'] = layers.DenseLayer(
-        net['pool'], num_units=256, nonlinearity=rectify)
-    net['out'] = layers.DenseLayer(
-        net['fcl'], num_units=output_size, nonlinearity=sigmoid)
-    return net
-
-
-def compile_model(input_var, target_var, net):
-
-    prediction = layers.get_output(net['out'])
-    loss = binary_crossentropy(prediction, target_var)
-    loss = lasagne.objectives.aggregate(loss)
-
-    params = layers.get_all_params(net['out'], trainable=True)
-    updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
-
-    test_prediction = layers.get_output(net['out'], deterministic=True)
-
-    test_loss = binary_crossentropy(test_prediction, target_var)
-    test_loss = lasagne.objectives.aggregate(test_loss)
-    test_acc = T.mean(
-        binary_accuracy(test_prediction, target_var),
-        dtype=theano.config.floatX)
-
-    train_fn = theano.function([input_var, target_var], loss, updates=updates)
-    val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
-
-    return train_fn, val_fn
-
-def nn_test(x_test, y_test, val_fn):
-    print('Test Results:')
-    print('=' * 80)
-
-    batch_err = []
-    batch_acc = []
-    for batch in iterate_minibatches(x_test, y_test, batch_size):
-        inputs, targets = batch
-        err, acc = val_fn(inputs, targets)
-        batch_err.append(err)
-        batch_acc.append(acc)
-
-    test_err = np.mean(batch_err)
-    test_acc = np.mean(batch_acc)
-
-    print('Test loss: %.6f' % test_err)
-    print('Test accuracy: %.2f' % (test_acc * 100))
-    print('-' * 80)
-    return test_err, test_acc
-
-
 # ############################# Batch iterator ###############################
 
 
@@ -163,13 +95,12 @@ for szr in range(1, num_szr + 1):
         fcl_num_units=256,
         fcl_nonlinearity=rectify,
         # layer output
-        output_num_units=2,
-        output_nonlinearity=softmax,
+        output_num_units=1,
+        output_nonlinearity=sigmoid,
         # optimization method params
         update=lasagne.updates.rmsprop,
         update_learning_rate=1e-5,
         objective_loss_function=binary_crossentropy,
-        verbose=1,
     )
 
     net1.initialize()
@@ -178,7 +109,7 @@ for szr in range(1, num_szr + 1):
     for epoch in range(num_epochs):
         st = time.clock()
         # make generator
-        loo_gen = chb.loo_gen(subj, szr, shuffle=True)
+        loo_gen = chb.loo_gen(subj, szr, 60, shuffle=True)
         # get test data (same on every epoch, so not really using it until the
         # last go-round)
         for batch in loo_gen:
@@ -210,7 +141,7 @@ for szr in range(1, num_szr + 1):
         plt.show()
 
     y_true, y_pred = y_test, net1.predict(x_test)
-    print(classfication_report(y_true, y_pred))
+    print(classification_report(y_true, y_pred))
     print(accuracy_score(y_true, y_pred))
 
 # Optionally, you could now dump the network weights to a file like this:
