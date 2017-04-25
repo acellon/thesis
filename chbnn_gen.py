@@ -22,32 +22,7 @@ from lasagne.objectives import binary_crossentropy, binary_accuracy
 
 # ##################### Build the neural network model #######################
 
-
-def scratch_net(input_var, data_size=(None, 1, 23, 256), output_size=1):
-    net = {}
-    net['data'] = layers.InputLayer(data_size, input_var=input_var)
-    net['conv1'] = layers.Conv2DLayer(
-        net['data'],
-        num_filters=4,
-        filter_size=(1, 7),
-        pad='same',
-        nonlinearity=rectify)
-    net['conv2'] = layers.Conv2DLayer(
-        net['conv1'],
-        num_filters=8,
-        filter_size=(1, 15),
-        pad='same',
-        stride=(1, 2),
-        nonlinearity=rectify)
-    net['pool'] = layers.MaxPool2DLayer(net['conv2'], pool_size=(1, 2))
-    net['fcl'] = layers.DenseLayer(
-        net['pool'], num_units=256, nonlinearity=rectify)
-    net['out'] = layers.DenseLayer(
-        net['fcl'], num_units=output_size, nonlinearity=sigmoid)
-    return net
-
-
-def big_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
+def make_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
     net = {}
     net['data'] = layers.InputLayer(data_size, input_var=input_var)
     net['conv1'] = layers.Conv2DLayer(
@@ -57,7 +32,7 @@ def big_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
         stride=(1, 32),
         pad='same',
         nonlinearity=rectify)
-    net['conv2'] = layers.Conv2DLayer(
+    net['conv2'] = layers.Conv2DLayer
         net['conv1'],
         num_filters=8,
         filter_size=(1, 127),
@@ -72,7 +47,7 @@ def big_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
     return net
 
 
-def scratch_model(input_var, target_var, net):
+def compile_model(input_var, target_var, net):
 
     prediction = layers.get_output(net['out'])
     loss = binary_crossentropy(prediction, target_var)
@@ -89,58 +64,12 @@ def scratch_model(input_var, target_var, net):
         binary_accuracy(test_prediction, target_var),
         dtype=theano.config.floatX)
 
-    train_fn = theano.function(
-        [input_var, target_var],
-        loss,
-        updates=updates,
-        allow_input_downcast=True)
-    val_fn = theano.function(
-        [input_var, target_var], [test_loss, test_acc],
-        allow_input_downcast=True)
+    train_fn = theano.function([input_var, target_var], loss, updates=updates)
+    val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
 
     return train_fn, val_fn
 
-
-def scratch_train(train_fn, val_fn, num_epochs):
-    train_err_list = []
-    val_err_list = []
-    val_acc_list = []
-
-    print('=' * 80)
-    print('| epoch \t| train loss\t| val loss\t| val acc\t| time\t')
-    print('=' * 80)
-
-    for epoch in range(num_epochs):
-        st = time.time()
-        batch_train_errs = []
-        for batch in iterate_minibatches(x_train, y_train, batch_size):
-            inputs, targets = batch
-            err = train_fn(inputs, targets)
-            batch_train_errs.append(err)
-        epoch_train_err = np.mean(batch_train_errs)
-        train_err_list.append(epoch_train_err)
-
-        batch_val_errs = []
-        batch_val_accs = []
-        for batch in iterate_minibatches(x_val, y_val, batch_size):
-            inputs, targets = batch
-            err, acc = val_fn(inputs, targets)
-            batch_val_errs.append(err)
-            batch_val_accs.append(acc)
-        epoch_val_err = np.mean(batch_val_errs)
-        val_err_list.append(epoch_val_err)
-        epoch_val_acc = np.mean(batch_val_accs)
-        val_acc_list.append(epoch_val_acc)
-
-        en = time.time()
-        print('| %d \t\t| %.6f\t| %.6f\t| %.2f%%\t| %.2f s' %
-              (epoch + 1, epoch_train_err, epoch_val_err, epoch_val_acc * 100,
-               en - st))
-    print('-' * 80)
-    return train_err_list, val_err_list, val_acc_list
-
-
-def scratch_test(val_fn):
+def nn_test(x_test, y_test, val_fn):
     print('Test Results:')
     print('=' * 80)
 
@@ -195,19 +124,19 @@ subj = chb.load_dataset(subject, tiger=tiger)
 sys.stdout.flush()
 batch_size = 10
 
-num = subj.get_num()
-test_accs = []
-for szr in range(1, num + 1):
-    print('\nLeave-One-Out: %d of %d' % (szr, num))
+num_szr = subj.get_num()
+test_accs = [0] * num_szr
+for szr in range(1, num_szr + 1):
+    print('\nLeave-One-Out: %d of %d' % (szr, num_szr))
 
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
-    net = big_net(input_var)
-    train_fn, val_fn = scratch_model(input_var, target_var, net)
+    net = make_net(input_var)
+    train_fn, val_fn = compile_model(input_var, target_var, net)
 
-    train_err_list = []
-    val_err_list = []
-    val_acc_list = []
+    train_err_list = [0] * num_epochs
+    val_err_list   = [0] * num_epochs
+    val_acc_list   = [0] * num_epochs
 
     print('=' * 80)
     print('| epoch \t| train loss\t| val loss\t| val acc\t| time\t')
@@ -217,10 +146,10 @@ for szr in range(1, num + 1):
     for epoch in range(num_epochs):
         st = time.clock()
         # make generator
-        generator = chb.loo_gen(subj, szr, shuffle=True)
+        loo_gen = chb.loo_gen(subj, szr, shuffle=True)
         # get test data (same on every epoch, so not really using it until the
         # last go-round)
-        for batch in generator:
+        for batch in loo_gen:
             x_test, y_test = batch
             break
         # separate val and train data
@@ -229,7 +158,7 @@ for szr in range(1, num + 1):
 
         x_train, y_train = 0, 0
         batch_train_errs = []
-        for idx, batch in enumerate(generator):
+        for idx, batch in enumerate(loo_gen):
             x_train, y_train = batch
             if idx < 1000:
                 x_train, x_val[idx] = x_train[:-1], x_train[-1:]
@@ -237,23 +166,24 @@ for szr in range(1, num + 1):
             err = train_fn(x_train, y_train)
             batch_train_errs.append(err)
         epoch_train_err = np.mean(batch_train_errs)
-        train_err_list.append(epoch_train_err)
+        train_err_list[epoch] = epoch_train_err
 
-        batch_val_errs = []
-        batch_val_accs = []
-        for batch in iterate_minibatches(x_val, y_val, batch_size):
+        batch_val_errs = [0] * int(1000/batch_size)
+        batch_val_accs = [0] * int(1000/batch_size)
+        for idx, batch in enumerate(iterate_minibatches(x_val, y_val,
+                                                        batch_size)):
             inputs, targets = batch
             err, acc = val_fn(inputs, targets)
-            batch_val_errs.append(err)
-            batch_val_accs.append(acc)
+            batch_val_errs[idx] = err
+            batch_val_accs[idx] = acc
         epoch_val_err = np.mean(batch_val_errs)
-        val_err_list.append(epoch_val_err)
+        val_err_list[epoch] = epoch_val_err
         epoch_val_acc = np.mean(batch_val_accs)
-        val_acc_list.append(epoch_val_acc)
+        val_acc_list[epoch] = epoch_val_acc
 
         en = time.clock()
         print('| %d \t\t| %.6f\t| %.6f\t| %.2f%%\t| %.2f s' %
-              (epoch + 1, epoch_train_err, val_err, val_acc * 100, en - st))
+              (epoch + 1, epoch_train_err, epoch_val_err, epoch_val_acc * 100, en - st))
     print('-' * 80)
 
 
@@ -275,15 +205,16 @@ for szr in range(1, num + 1):
         plt.ylabel('Accuracy')
         plt.show()
 
-    test_err, test_acc = scratch_test(val_fn)
-    test_accs.append(test_acc)
+    test_err, test_acc = nn_test(x_test, y_test, val_fn)
+    test_accs[szr - 1] = test_acc
     sys.stdout.flush()
 
-print('*-' * 40)
+print('*' * 80)
 print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
-      (num, np.mean(test_accs) * 100))
-print('*-' * 40)
+      (num_szr, np.mean(test_accs) * 100))
+print('*' * 80)
 print()
+
 # Optionally, you could now dump the network weights to a file like this:
 # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
 #
