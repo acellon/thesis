@@ -370,16 +370,18 @@ def epoch_gen(subj, batchsec=10, shuffle=False):
     epochlen = to_hz(5)
     stride = to_hz(1)
     for eeg in subj:
-        datalen = eeg.get_rec().shape[1]
+        eeglen = eeg.get_rec().shape[1]
+        #nonzero = 0 #####
         if shuffle:
-            indices = np.arange(datalen)
+            indices = np.arange(eeglen)
             np.random.shuffle(indices)
         epoch_list = []
         label_list = []
-        for epochstart in range(0, datalen - epochlen + to_hz(1), stride):
+        for epochstart in range(0, eeglen - epochlen + to_hz(1), stride):
             if shuffle:
                 excerpt = indices[epochstart:epochstart + epochlen]
-                label = eeg.is_ict(to_s(excerpt[0]))
+                exStart = np.asscalar(excerpt[0])
+                label = eeg.is_ict(to_s(exStart))
             else:
                 excerpt = slice(epochstart, epochstart + epochlen)
                 label = eeg.is_ict(to_s(epochstart))
@@ -389,32 +391,27 @@ def epoch_gen(subj, batchsec=10, shuffle=False):
                 inputs = np.asarray(epoch_list, dtype='float32')
                 inputs = np.expand_dims(inputs, axis=1)
                 targets = np.asarray(label_list, dtype='int32')
+                #nonzero += np.count_nonzero(targets)
                 epoch_list, label_list = [], []
                 yield inputs, targets
+        #print('nonzero for ',eeg.get_name(),':',nonzero)
 
-
-def loo_gen(subj, loonum, batchsec=10, max_num=None, shuffle=False):
-    '''
-    right now, we can throw out randomly to have a specific number of samples
-    per CHBfile...rather than across the whole subject. we'll have to think
-    about how to make that happen with a generator (UGH)
-    '''
+def loo_gen(subj, loonum, batchsec=10, shuffle=False):
     batchhz = to_hz(batchsec)
     imglen, stride = to_hz(5), to_hz(1)
 
     looname, (ictstart, ictstop) = subj.get_ict()[loonum - 1]
     loofile = subj.get_file(looname)
-    loofilelen_s = to_s(loofile.get_rec().shape[1])
+    loofilelensec = to_s(loofile.get_rec().shape[1])
     if ictstart < 500:
         loostart = 0
         loostop = loostart + 1000
-    elif ictstop > loofilelen_s - 505:
-        loostop = loofilelen_s - 6
+    elif ictstop > loofilelensec - 505:
+        loostop = loofilelensec - 6
         loostart = loostop - 1000
     else:
         loostart = ictstart - 500
         loostop = loostart + 1000
-
     testlist, testlabel = [], []
     for start in range(loostart, loostop, to_s(stride)):
         excerpt = loofile.get_rec()[:, to_hz(start):to_hz(start) + imglen]
@@ -423,16 +420,15 @@ def loo_gen(subj, loonum, batchsec=10, max_num=None, shuffle=False):
     inputs = np.asarray(testlist, dtype='float32')
     inputs = np.expand_dims(inputs, axis=1)
     targets = np.asarray(testlabel, dtype='int32')
+    #print('nonzero removed for test:',np.count_nonzero(targets)) #$#
     yield inputs, targets
 
-    ret_num = 0
     for eeg in subj:
         eeglen = eeg.get_rec().shape[1]
-        if max_num is None:
-            max_num = eeglen
+        #nonzero = 0 #$#
         if (eeg.get_name() == looname):
             first = list(range(to_hz(loostart)))
-            last = list(range(to_hz(loostop), to_hz(loofilelen_s - 6)))
+            last = list(range(to_hz(loostop), to_hz(loofilelensec - 6)))
             fullList = first + last
             indices = np.asarray(fullList)
         else:
@@ -441,17 +437,80 @@ def loo_gen(subj, loonum, batchsec=10, max_num=None, shuffle=False):
             np.random.shuffle(indices)
         indlen = len(indices)
         imglist, lablist = [], []
-        for idx, start in enumerate(range(0, indlen - imglen, stride)):
+        for idx, start in enumerate(range(0, indlen - imglen + to_hz(1), stride)):
             excerpt = indices[start:start + imglen]
-            label = eeg.is_ict(excerpt[0])
-            if label and ret_num < max_num:
-                ret_num += 1
-                imglist.append(eeg.get_rec()[:, excerpt])
-                lablist.append(label)
-                if len(imglist) == batchsec:
-                    inputs = np.asarray(imglist, dtype='float32')
-                    inputs = np.expand_dims(inputs, axis=1)
-                    targets = np.asarray(lablist, dtype='int32')
-                    imglist, lablist = [], []
-                    yield inputs, targets
-        max_num = None
+            exStart = np.asscalar(excerpt[0])
+            label = eeg.is_ict(to_s(exStart))
+
+            imglist.append(eeg.get_rec()[:, excerpt])
+            lablist.append(int(label))
+            if len(imglist) == batchsec:
+                inputs = np.asarray(imglist, dtype='float32')
+                inputs = np.expand_dims(inputs, axis=1)
+                targets = np.asarray(lablist, dtype='int32')
+                #nonzero += np.count_nonzero(targets) #$#
+                imglist, lablist = [], []
+                yield inputs, targets
+        #print('nonzero for ',eeg.get_name(),':',nonzero) #$#
+
+def lgus(subj, loonum, batchsec=60,  drop_prob=0, shuffle=True):
+    batchhz = to_hz(batchsec)
+    winlen, stride = to_hz(5), to_hz(1)
+
+    # return the testing data on the first pass through the generator
+    looname, (ictstart, ictstop) = subj.get_ict()[loonum - 1]
+    loofile = subj.get_file(looname)
+    loofilelensec = to_s(loofile.get_rec().shape[1])
+    if ictstart < 500:
+        loostart = 0
+        loostop = loostart + 1000
+    elif ictstop > loofilelensec - 505:
+        loostop = loofilelensec - 6
+        loostart = loostop - 1000
+    else:
+        loostart = ictstart - 500
+        loostop = loostart + 1000
+    testlist, testlabel = [], []
+    for start in range(loostart, loostop, to_s(stride)):
+        excerpt = loofile.get_rec()[:, to_hz(start):to_hz(start) + winlen]
+        testlist.append(excerpt)
+        testlabel.append(int(loofile.is_ict(start)))
+    inputs = np.asarray(testlist, dtype='float32')
+    inputs = np.expand_dims(inputs, axis=1)
+    targets = np.asarray(testlabel, dtype='int32')
+    #print('nonzero removed for test:',np.count_nonzero(targets)) #$#
+    yield inputs, targets
+
+    # undersample the majority group (is_ict == 0) with probability drop_prob
+
+    for eeg in subj:
+        eeglen = eeg.get_rec().shape[1]
+        #nonzero = 0 #$#
+        if (eeg.get_name() == looname):
+            first = list(range(to_hz(loostart)))
+            last = list(range(to_hz(loostop), to_hz(loofilelensec - 6)))
+            fullList = first + last
+            indices = np.asarray(fullList)
+        else:
+            indices = np.arange(eeglen)
+        if shuffle:
+            np.random.shuffle(indices)
+        indlen = len(indices)
+        imglist, lablist = [], []
+        for idx, start in enumerate(range(0, indlen - winlen, stride)):
+            excerpt = indices[start:start + winlen]
+            exStart = np.asscalar(excerpt[0])
+            label = eeg.is_ict(to_s(exStart))
+            if (not label) and (np.random.random() < drop_prob):
+                continue
+
+            imglist.append(eeg.get_rec()[:, excerpt])
+            lablist.append(int(label))
+            if len(imglist) == batchsec:
+                inputs = np.asarray(imglist, dtype='float32')
+                inputs = np.expand_dims(inputs, axis=1)
+                targets = np.asarray(lablist, dtype='int32')
+                #nonzero += np.count_nonzero(targets) #$#
+                imglist, lablist = [], []
+                yield inputs, targets
+        #print('nonzero for ',eeg.get_name(),':',nonzero) #$#
