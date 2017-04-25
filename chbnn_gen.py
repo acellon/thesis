@@ -207,8 +207,7 @@ for szr in range(1, num_szr + 1):
 
     test_err, test_acc = nn_test(x_test, y_test, val_fn)
     test_accs[szr - 1] = test_acc
-    sys.stdout.fl
-ush()
+    sys.stdout.flush()
 
 print('*' * 80)
 print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
