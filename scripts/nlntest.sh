@@ -5,7 +5,7 @@
 #SBATCH --error=nln.e%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=04:00:00
+#SBATCH --time=01:00:00
 #SBATCH --workdir=/home/acellon/thesis
 #SBATCH --gres=gpu:1
 #SBATCH --mem=12GB
@@ -18,4 +18,5 @@ export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 module load anaconda
 module load cudatoolkit
 module load intel-mkl
-python ./nn_nln.py chb19 10 True
+source activate /tigress/acellon/theano
+python ./nn_nln.py chb19 5 True

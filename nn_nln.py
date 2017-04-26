@@ -54,6 +54,8 @@ if len(sys.argv) > 4:
 else:
     plotter = False
 
+print('Check using lgus (90% undersampling)')
+
 # Load the dataset
 subj = chb.load_dataset(subject, tiger=tiger)
 sys.stdout.flush()
@@ -95,14 +97,18 @@ for szr in range(1, num_szr + 1):
         output_nonlinearity=sigmoid,
         # optimization method params
         update=lasagne.updates.rmsprop,
-        update_learning_rate=1e-5,
+        update_learning_rate=1e-6,
         objective_loss_function=binary_crossentropy,
+
+        on_training_started=nolearn.lasagne.PrintLayerInfo(),
+        on_training_finished=nolearn.lasagne.PrintLog(),
+        
     )
 
     net1.initialize()
 
     for epoch in range(num_epochs):
-        loo_gen = chb.loo_gen(subj, szr, 60, shuffle=True)
+        loo_gen = chb.lgus(subj, szr, batchsec=60, drop_prob=0.9, shuffle=True)
         x_test, y_test = 0, 0
         for batch in loo_gen:
             x_test, y_test = batch
@@ -112,15 +118,14 @@ for szr in range(1, num_szr + 1):
             x_train, y_train = batch
             net1.partial_fit(x_train, y_train)
 
-    y_true, y_pred = y_test, net1.predict(x_test)
+    y_true, y_pred, y_prob = y_test, net1.predict(x_test), net1.predict_proba(x_test)
     print(classification_report(y_true, y_pred))
     print('Accuracy score:', accuracy_score(y_true, y_pred))
     print('Confusion matrix:\n',confusion_matrix(y_true, y_pred))
     print('ROC-AUC score:',roc_auc_score(y_true, y_pred))
     print('Matthews Coeff:',matthews_corrcoef(y_true, y_pred))
-    print('y_pred vs y_true')
-    print(y_pred)
-    print(y_true)
+    print('y_true | y_pred | y_prob')
+    print(np.array([np.squeeze(y_true), np.squeeze(y_pred), np.squeeze(y_prob)]).T)
 # Optionally, you could now dump the network weights to a file like this:
 # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
 #
