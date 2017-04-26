@@ -7,7 +7,7 @@
 #SBATCH --time=00:45:00
 #SBATCH --workdir=/home/acellon/thesis
 #SBATCH --gres=gpu:1
-#SBATCH --mem=60GB
+#SBATCH --mem=12GB
 #SBATCH --mail-type=end
 #SBATCH --mail-user=acellon@princeton.edu
 
@@ -17,4 +17,4 @@ export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 module load anaconda
 module load cudatoolkit
 module load intel-mkl
-python ./chbnn.py chb01 5 True
+python ./chbnn.py chb19 3 True

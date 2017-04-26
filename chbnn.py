@@ -20,6 +20,7 @@ from lasagne import layers
 from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid
 from lasagne.objectives import binary_crossentropy, binary_accuracy
 
+from sklearn import metrics
 # ##################### Build the neural network model #######################
 
 
@@ -113,7 +114,12 @@ def scratch_model(input_var, target_var, net):
         )
     print('val_fn compiled')
     sys.stdout.flush()
-    return train_fn, val_fn
+    print('compiling pred_fn')
+    sys.stdout.flush()
+    pred_fn = theano.function([input_var], test_prediction)
+    print('pred_fn compiled')
+    sys.stdout.flush()
+    return train_fn, val_fn, pred_fn
 
 
 def scratch_train(train_fn, val_fn, num_epochs):
@@ -257,6 +263,11 @@ for szr in range(1, num + 1):
     test_err, test_acc = scratch_test(val_fn)
     test_accs.append(test_acc)
     sys.stdout.flush()
+
+    y_preds = pred_fn(x_test)
+    print(type(y_preds))
+    print(y_preds)
+    print(x_test)
 
 print('*-' * 40)
 print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
