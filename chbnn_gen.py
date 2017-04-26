@@ -66,8 +66,9 @@ def compile_model(input_var, target_var, net):
 
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
     val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
+    pred_fn = theano.function([input_var], test_prediction)
 
-    return train_fn, val_fn
+    return train_fn, val_fn, pred_fn
 
 def nn_test(x_test, y_test, val_fn):
     print('Test Results:')
@@ -87,6 +88,14 @@ def nn_test(x_test, y_test, val_fn):
     print('Test loss: %.6f' % test_err)
     print('Test accuracy: %.2f' % (test_acc * 100))
     print('-' * 80)
+
+    y_preds = pred_fn(x_test)
+    print(type(y_preds))
+    print(y_preds)
+    print(x_test)
+
+    print('-' * 80)
+
     return test_err, test_acc
 
 
