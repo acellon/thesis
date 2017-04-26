@@ -102,7 +102,6 @@ for szr in range(1, num_szr + 1):
 
         on_training_started=nolearn.lasagne.PrintLayerInfo(),
         on_training_finished=nolearn.lasagne.PrintLog(),
-        
     )
 
     net1.initialize()
@@ -118,14 +117,15 @@ for szr in range(1, num_szr + 1):
             x_train, y_train = batch
             net1.partial_fit(x_train, y_train)
 
-    y_true, y_pred, y_prob = y_test, net1.predict(x_test), net1.predict_proba(x_test)
+    y_true, y_pred = y_test, net1.predict(x_test)
+    y_prob = net1.predict_proba(x_test)
     print(classification_report(y_true, y_pred))
     print('Accuracy score:', accuracy_score(y_true, y_pred))
-    print('Confusion matrix:\n',confusion_matrix(y_true, y_pred))
-    print('ROC-AUC score:',roc_auc_score(y_true, y_pred))
-    print('Matthews Coeff:',matthews_corrcoef(y_true, y_pred))
+    print('Confusion matrix:\n', confusion_matrix(y_true, y_pred))
+    print('ROC-AUC score:', roc_auc_score(y_true, y_pred))
+    print('Matthews Coeff:', matthews_corrcoef(y_true, y_pred))
     print('y_true | y_pred | y_prob')
-    print(np.array([np.squeeze(y_true), np.squeeze(y_pred), np.squeeze(y_prob)]).T)
+    print(np.array([y_true, y_pred, np.squeeze(y_prob)]).T)
 # Optionally, you could now dump the network weights to a file like this:
 # np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
 #
