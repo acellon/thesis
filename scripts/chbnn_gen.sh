@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #SBATCH --job-name=chbnn_gen.py
-#SBATCH --output=chb08_probtest.o%j
+#SBATCH --output=chb05_probtest.o%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=01:30:00

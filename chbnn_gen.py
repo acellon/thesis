@@ -72,7 +72,7 @@ def nn_test(x_test, y_test, val_fn, prob_fn):
     print('Matthews Correlation Coefficient:', metrics.matthews_corrcoef(y_test, y_pred))
     print('-' * 80)
     print(np.ravel(y_prob))
-    print(np.ravel(y_pred).astype('bool'))
+    print(np.ravel(y_pred).astype('int'))
     print(y_test)
     print('=' * 80)
     return test_err, test_acc, y_pred, y_prob
@@ -195,8 +195,8 @@ for szr in range(1, num_szr + 1):
         plt.show()
 
     test_err, test_acc, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn)
-    prob_dict['_'.join(['prob', str(szr)])] = y_prob
-    prob_dict['_'.join(['true', str(szr)])] = y_test
+    out_dict['_'.join(['prob', str(szr)])] = y_prob
+    out_dict['_'.join(['true', str(szr)])] = y_test
     test_accs[szr - 1] = test_acc
     sys.stdout.flush()
 
