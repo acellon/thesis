@@ -208,7 +208,7 @@ print('*' * 80)
 print()
 
 subjname = str(subj.get_name())
-np.savez(''.join([subjname, 'probs.npz']), prob_dict)
+np.savez(''.join([subjname, 'probs.npz']), **prob_dict)
 # Optionally, you could now dump the network weights to a file like this:
 #np.savez(''.join([subj.get_name(), 'model.npz']),
 #         *lasagne.layers.get_all_param_values(net))
