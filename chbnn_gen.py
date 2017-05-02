@@ -206,7 +206,7 @@ print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
 print('*' * 80)
 print()
 
-subjname = 'chb05'
+subjname = 'chb09'
 np.savez(''.join([subjname, 'out.npz']), **out_dict)
 # Optionally, you could now dump the network weights to a file like this:
 #np.savez(''.join([subj.get_name(), 'model.npz']),
