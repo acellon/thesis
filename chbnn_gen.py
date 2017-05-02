@@ -17,36 +17,12 @@ import theano.tensor as T
 
 import lasagne
 from lasagne import layers
-from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid, softmax
 from lasagne.objectives import binary_crossentropy, binary_accuracy
 from sklearn import metrics
 
+import networks as nw
+
 # ##################### Build the neural network model #######################
-
-def make_net(input_var, data_size=(None, 1, 23, 1280), output_size=1):
-    net = {}
-    net['data'] = layers.InputLayer(data_size, input_var=input_var)
-    net['conv1'] = layers.Conv2DLayer(
-        net['data'],
-        num_filters=8,
-        filter_size=(1, 255),
-        stride=(1, 32),
-        pad='same',
-        nonlinearity=rectify)
-    net['conv2'] = layers.Conv2DLayer(
-        net['conv1'],
-        num_filters=8,
-        filter_size=(1, 127),
-        pad='same',
-        stride=(1, 32),
-        nonlinearity=rectify)
-    net['pool'] = layers.MaxPool2DLayer(net['conv2'], pool_size=(1, 2))
-    net['fcl'] = layers.DenseLayer(
-        net['pool'], num_units=256, nonlinearity=rectify)
-    net['out'] = layers.DenseLayer(
-        net['fcl'], num_units=output_size, nonlinearity=sigmoid)
-    return net
-
 
 def compile_model(input_var, target_var, net):
 
@@ -95,8 +71,8 @@ def nn_test(x_test, y_test, val_fn, prob_fn):
     print('Confusion matrix:\n', metrics.confusion_matrix(y_test, y_pred))
     print('Matthews Correlation Coefficient:', metrics.matthews_corrcoef(y_test, y_pred))
     print('-' * 80)
-    print(y_pred)
-    print(y_prob)
+    print(np.flatten(y_pred))
+    print(np.flatten(y_prob))
     print(y_test)
     print('=' * 80)
     return test_err, test_acc, y_pred, y_prob
@@ -138,12 +114,13 @@ batch_size = 10
 
 num_szr = subj.get_num()
 test_accs = [0] * num_szr
+prob_dict = {}
 for szr in range(1, num_szr + 1):
     print('\nLeave-One-Out: %d of %d' % (szr, num_szr))
 
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
-    net = make_net(input_var)
+    net = nw.simple(input_var)
     train_fn, val_fn, prob_fn = compile_model(input_var, target_var, net)
 
     train_err_list = [0] * num_epochs
@@ -218,6 +195,8 @@ for szr in range(1, num_szr + 1):
         plt.show()
 
     test_err, test_acc, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn)
+    savename = subj.get_name() + '_' + str(szr)
+    prob_dict[savename] = y_prob
     test_accs[szr - 1] = test_acc
     sys.stdout.flush()
 
@@ -226,9 +205,10 @@ print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
       (num_szr, np.mean(test_accs) * 100))
 print('*' * 80)
 print()
-
+np.savez(subj.get_name() + 'probs.npz', prob_dict)
 # Optionally, you could now dump the network weights to a file like this:
-# np.savez('model.npz', *lasagne.layers.get_all_param_values(network))
+np.savez(subj.get_name() + 'model.npz',
+         *lasagne.layers.get_all_param_values(net))
 #
 # And load them again later on like this:
 # with np.load('model.npz') as f:
