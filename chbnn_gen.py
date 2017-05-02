@@ -114,7 +114,7 @@ batch_size = 10
 
 num_szr = subj.get_num()
 test_accs = [0] * num_szr
-prob_dict = {}
+out_dict = {}
 for szr in range(1, num_szr + 1):
     print('\nLeave-One-Out: %d of %d' % (szr, num_szr))
 
@@ -195,9 +195,8 @@ for szr in range(1, num_szr + 1):
         plt.show()
 
     test_err, test_acc, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn)
-    subjname = str(subj.get_name())
-    savename = '_'.join([subjname, str(szr)])
-    prob_dict[savename] = y_prob
+    prob_dict['_'.join(['prob', str(szr)])] = y_prob
+    prob_dict['_'.join(['true', str(szr)])] = y_test
     test_accs[szr - 1] = test_acc
     sys.stdout.flush()
 
@@ -207,8 +206,8 @@ print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
 print('*' * 80)
 print()
 
-subjname = str(subj.get_name())
-np.savez(''.join([subjname, 'probs.npz']), **prob_dict)
+subjname = 'chb09'
+np.savez(''.join([subjname, 'out.npz']), **out_dict)
 # Optionally, you could now dump the network weights to a file like this:
 #np.savez(''.join([subj.get_name(), 'model.npz']),
 #         *lasagne.layers.get_all_param_values(net))
