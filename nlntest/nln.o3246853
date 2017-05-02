@@ -1,0 +1,150 @@
+Check using lgus (90% undersampling)
+Loading: /tigress/acellon/data/chb19.npz
+Done: 19.620000 seconds elapsed.
+
+Leave-One-Out: 1 of 3
+NeuralNet(X_tensor_type=None,
+     batch_iterator_test=<nolearn.lasagne.base.BatchIterator object at 0x2afd6fb87a50>,
+     batch_iterator_train=<nolearn.lasagne.base.BatchIterator object at 0x2afd6fb87950>,
+     check_input=True, conv1_filter_size=(1, 255),
+     conv1_nonlinearity=<function rectify at 0x2afd6d028500>,
+     conv1_num_filters=8, conv1_pad='same', conv1_stride=(1, 32),
+     conv2_filter_size=(1, 127),
+     conv2_nonlinearity=<function rectify at 0x2afd6d028500>,
+     conv2_num_filters=8, conv2_pad='same', conv2_stride=(1, 32),
+     custom_scores=None,
+     fcl_nonlinearity=<function rectify at 0x2afd6d028500>,
+     fcl_num_units=256, input_shape=(None, 1, 23, 1280),
+     layers=[('input', <class 'lasagne.layers.input.InputLayer'>), ('conv1', <class 'lasagne.layers.conv.Conv2DLayer'>), ('conv2', <class 'lasagne.layers.conv.Conv2DLayer'>), ('pool', <class 'lasagne.layers.pool.MaxPool2DLayer'>), ('fcl', <class 'lasagne.layers.dense.DenseLayer'>), ('output', <class 'lasagne.layers.dense.DenseLayer'>)],
+     loss=None, max_epochs=100, more_params={},
+     objective=<function objective at 0x2afd6fb8e500>,
+     objective_loss_function=<function binary_crossentropy at 0x2afd6de7eaa0>,
+     on_batch_finished=[], on_epoch_finished=[], on_training_finished=[],
+     on_training_started=[],
+     output_nonlinearity=<function sigmoid at 0x2afd6c83caa0>,
+     output_num_units=1, pool_pool_size=(1, 2), regression=False,
+     scores_train=[], scores_valid=[],
+     train_split=<nolearn.lasagne.base.TrainSplit object at 0x2afd6fb87a90>,
+     update=<function rmsprop at 0x2afd6de82578>,
+     update_learning_rate=1e-05, use_label_encoder=False, verbose=0,
+     y_tensor_type=TensorType(int32, vector))
+             precision    recall  f1-score   support
+
+          0       0.92      1.00      0.96       917
+          1       0.00      0.00      0.00        83
+
+avg / total       0.84      0.92      0.88      1000
+
+Accuracy score: 0.917
+Confusion matrix:
+ [[917   0]
+ [ 83   0]]
+ROC-AUC score: 0.5
+Matthews Coeff: 0.0
+y_true | y_pred | y_prob
+shapes: (1000,) (1000,) (1000, 1)
+[[  0.00000000e+00   0.00000000e+00   7.25068944e-03]
+ [  0.00000000e+00   0.00000000e+00   5.39305527e-03]
+ [  0.00000000e+00   0.00000000e+00   2.16175988e-02]
+ ..., 
+ [  0.00000000e+00   0.00000000e+00   7.77860588e-12]
+ [  0.00000000e+00   0.00000000e+00   3.44498430e-14]
+ [  0.00000000e+00   0.00000000e+00   2.17998449e-12]]
+
+Leave-One-Out: 2 of 3
+NeuralNet(X_tensor_type=None,
+     batch_iterator_test=<nolearn.lasagne.base.BatchIterator object at 0x2afd6fb87a50>,
+     batch_iterator_train=<nolearn.lasagne.base.BatchIterator object at 0x2afd6fb87950>,
+     check_input=True, conv1_filter_size=(1, 255),
+     conv1_nonlinearity=<function rectify at 0x2afd6d028500>,
+     conv1_num_filters=8, conv1_pad='same', conv1_stride=(1, 32),
+     conv2_filter_size=(1, 127),
+     conv2_nonlinearity=<function rectify at 0x2afd6d028500>,
+     conv2_num_filters=8, conv2_pad='same', conv2_stride=(1, 32),
+     custom_scores=None,
+     fcl_nonlinearity=<function rectify at 0x2afd6d028500>,
+     fcl_num_units=256, input_shape=(None, 1, 23, 1280),
+     layers=[('input', <class 'lasagne.layers.input.InputLayer'>), ('conv1', <class 'lasagne.layers.conv.Conv2DLayer'>), ('conv2', <class 'lasagne.layers.conv.Conv2DLayer'>), ('pool', <class 'lasagne.layers.pool.MaxPool2DLayer'>), ('fcl', <class 'lasagne.layers.dense.DenseLayer'>), ('output', <class 'lasagne.layers.dense.DenseLayer'>)],
+     loss=None, max_epochs=100, more_params={},
+     objective=<function objective at 0x2afd6fb8e500>,
+     objective_loss_function=<function binary_crossentropy at 0x2afd6de7eaa0>,
+     on_batch_finished=[], on_epoch_finished=[], on_training_finished=[],
+     on_training_started=[],
+     output_nonlinearity=<function sigmoid at 0x2afd6c83caa0>,
+     output_num_units=1, pool_pool_size=(1, 2), regression=False,
+     scores_train=[], scores_valid=[],
+     train_split=<nolearn.lasagne.base.TrainSplit object at 0x2afd6fb87a90>,
+     update=<function rmsprop at 0x2afd6de82578>,
+     update_learning_rate=1e-05, use_label_encoder=False, verbose=0,
+     y_tensor_type=TensorType(int32, vector))
+             precision    recall  f1-score   support
+
+          0       0.92      1.00      0.96       918
+          1       0.00      0.00      0.00        82
+
+avg / total       0.84      0.92      0.88      1000
+
+Accuracy score: 0.918
+Confusion matrix:
+ [[918   0]
+ [ 82   0]]
+ROC-AUC score: 0.5
+Matthews Coeff: 0.0
+y_true | y_pred | y_prob
+shapes: (1000,) (1000,) (1000, 1)
+[[  0.00000000e+00   0.00000000e+00   7.79837719e-04]
+ [  0.00000000e+00   0.00000000e+00   5.05550197e-05]
+ [  0.00000000e+00   0.00000000e+00   2.86182294e-05]
+ ..., 
+ [  0.00000000e+00   0.00000000e+00   9.45893335e-05]
+ [  0.00000000e+00   0.00000000e+00   1.30251374e-08]
+ [  0.00000000e+00   0.00000000e+00   3.88969834e-09]]
+
+Leave-One-Out: 3 of 3
+NeuralNet(X_tensor_type=None,
+     batch_iterator_test=<nolearn.lasagne.base.BatchIterator object at 0x2afd6fb87a50>,
+     batch_iterator_train=<nolearn.lasagne.base.BatchIterator object at 0x2afd6fb87950>,
+     check_input=True, conv1_filter_size=(1, 255),
+     conv1_nonlinearity=<function rectify at 0x2afd6d028500>,
+     conv1_num_filters=8, conv1_pad='same', conv1_stride=(1, 32),
+     conv2_filter_size=(1, 127),
+     conv2_nonlinearity=<function rectify at 0x2afd6d028500>,
+     conv2_num_filters=8, conv2_pad='same', conv2_stride=(1, 32),
+     custom_scores=None,
+     fcl_nonlinearity=<function rectify at 0x2afd6d028500>,
+     fcl_num_units=256, input_shape=(None, 1, 23, 1280),
+     layers=[('input', <class 'lasagne.layers.input.InputLayer'>), ('conv1', <class 'lasagne.layers.conv.Conv2DLayer'>), ('conv2', <class 'lasagne.layers.conv.Conv2DLayer'>), ('pool', <class 'lasagne.layers.pool.MaxPool2DLayer'>), ('fcl', <class 'lasagne.layers.dense.DenseLayer'>), ('output', <class 'lasagne.layers.dense.DenseLayer'>)],
+     loss=None, max_epochs=100, more_params={},
+     objective=<function objective at 0x2afd6fb8e500>,
+     objective_loss_function=<function binary_crossentropy at 0x2afd6de7eaa0>,
+     on_batch_finished=[], on_epoch_finished=[], on_training_finished=[],
+     on_training_started=[],
+     output_nonlinearity=<function sigmoid at 0x2afd6c83caa0>,
+     output_num_units=1, pool_pool_size=(1, 2), regression=False,
+     scores_train=[], scores_valid=[],
+     train_split=<nolearn.lasagne.base.TrainSplit object at 0x2afd6fb87a90>,
+     update=<function rmsprop at 0x2afd6de82578>,
+     update_learning_rate=1e-05, use_label_encoder=False, verbose=0,
+     y_tensor_type=TensorType(int32, vector))
+             precision    recall  f1-score   support
+
+          0       0.91      1.00      0.96       914
+          1       0.00      0.00      0.00        86
+
+avg / total       0.84      0.91      0.87      1000
+
+Accuracy score: 0.914
+Confusion matrix:
+ [[914   0]
+ [ 86   0]]
+ROC-AUC score: 0.5
+Matthews Coeff: 0.0
+y_true | y_pred | y_prob
+shapes: (1000,) (1000,) (1000, 1)
+[[  0.00000000e+00   0.00000000e+00   2.74489850e-07]
+ [  0.00000000e+00   0.00000000e+00   3.84131731e-08]
+ [  0.00000000e+00   0.00000000e+00   1.44577518e-06]
+ ..., 
+ [  0.00000000e+00   0.00000000e+00   2.41163374e-11]
+ [  0.00000000e+00   0.00000000e+00   1.55839672e-07]
+ [  0.00000000e+00   0.00000000e+00   1.31438028e-07]]

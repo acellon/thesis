@@ -17,8 +17,9 @@ import theano.tensor as T
 
 import lasagne
 from lasagne import layers
-from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid
+from lasagne.nonlinearities import rectify, leaky_rectify, sigmoid, softmax
 from lasagne.objectives import binary_crossentropy, binary_accuracy
+from sklearn import metrics
 
 # ##################### Build the neural network model #######################
 
@@ -66,11 +67,11 @@ def compile_model(input_var, target_var, net):
 
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
     val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
-    pred_fn = theano.function([input_var], test_prediction)
+    prob_fn = theano.function([input_var], test_prediction)
 
-    return train_fn, val_fn, pred_fn
+    return train_fn, val_fn, prob_fn
 
-def nn_test(x_test, y_test, val_fn):
+def nn_test(x_test, y_test, val_fn, prob_fn):
     print('Test Results:')
     print('=' * 80)
 
@@ -89,14 +90,16 @@ def nn_test(x_test, y_test, val_fn):
     print('Test accuracy: %.2f' % (test_acc * 100))
     print('-' * 80)
 
-    y_preds = pred_fn(x_test)
-    print(type(y_preds))
-    print(y_preds)
-    print(x_test)
-
+    y_prob = prob_fn(x_test)
+    y_pred = y_prob > 0.5
+    print('Confusion matrix:\n', metrics.confusion_matrix(y_test, y_pred))
+    print('Matthews Correlation Coefficient:', metrics.matthews_corrcoef(y_test, y_pred))
     print('-' * 80)
-
-    return test_err, test_acc
+    print(y_pred)
+    print(y_prob)
+    print(y_test)
+    print('=' * 80)
+    return test_err, test_acc, y_pred, y_prob
 
 
 # ############################# Batch iterator ###############################
@@ -141,7 +144,7 @@ for szr in range(1, num_szr + 1):
     input_var = T.tensor4('inputs')
     target_var = T.ivector('targets')
     net = make_net(input_var)
-    train_fn, val_fn = compile_model(input_var, target_var, net)
+    train_fn, val_fn, prob_fn = compile_model(input_var, target_var, net)
 
     train_err_list = [0] * num_epochs
     val_err_list   = [0] * num_epochs
@@ -155,7 +158,7 @@ for szr in range(1, num_szr + 1):
     for epoch in range(num_epochs):
         st = time.clock()
         # make generator
-        loo_gen = chb.loo_gen(subj, szr, shuffle=True)
+        loo_gen = chb.lgus(subj, szr, batchsec=60, drop_prob=0.8, shuffle=True)
         # get test data (same on every epoch, so not really using it until the
         # last go-round)
         for batch in loo_gen:
@@ -214,7 +217,7 @@ for szr in range(1, num_szr + 1):
         plt.ylabel('Accuracy')
         plt.show()
 
-    test_err, test_acc = nn_test(x_test, y_test, val_fn)
+    test_err, test_acc, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn)
     test_accs[szr - 1] = test_acc
     sys.stdout.flush()
 

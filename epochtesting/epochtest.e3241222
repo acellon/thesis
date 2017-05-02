@@ -1,0 +1,9 @@
++(0):ERROR:0: Unable to locate a modulefile for 'cudatoolkit'
+Traceback (most recent call last):
+  File "./epochtest.py", line 9, in <module>
+    train, trainlab, test, testlab = chb.loo_epoch(subject, sznum)
+  File "/home/acellon/thesis/chb.py", line 360, in loo_epoch
+    train = np.asarray(train, dtype='float64')
+  File "/home/acellon/.local/lib/python2.7/site-packages/numpy/core/numeric.py", line 531, in asarray
+    return array(a, dtype, copy=False, order=order)
+MemoryError

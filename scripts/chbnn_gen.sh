@@ -1,10 +1,10 @@
 #!/bin/sh
 
 #SBATCH --job-name=chbnn_gen.py
-#SBATCH --output=chbnn_gen.o%j
+#SBATCH --output=chb08_bench.o%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=01:00:00
+#SBATCH --time=01:30:00
 #SBATCH --workdir=/home/acellon/thesis
 #SBATCH --gres=gpu:1
 #SBATCH --mem=12GB
@@ -17,4 +17,5 @@ export MODULEPATH=/tigress/PNI/modulefiles:$MODULEPATH
 module load anaconda
 module load cudatoolkit
 module load intel-mkl
-python ./chbnn_gen.py chb19 1 True
+source activate /tigress/acellon/theano
+python ./chbnn_gen.py chb08 10 True

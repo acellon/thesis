@@ -1,0 +1,7 @@
++(0):ERROR:0: Unable to locate a modulefile for 'cudatoolkit'
+Traceback (most recent call last):
+  File "./epochtest.py", line 9, in <module>
+    train, trainlab, test, testlab = chb.loo_epoch(subject, sznum)
+  File "/home/acellon/thesis/chb.py", line 323, in loo_epoch
+    loofile_len = subj.get_file(loofile).get_rec().shape[1]
+AttributeError: 'NoneType' object has no attribute 'get_rec'

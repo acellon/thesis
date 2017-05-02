@@ -1,0 +1,16 @@
+Loading: /tigress/acellon/data/chb02.npz
+Done: 22.160000 seconds elapsed.
+Seizure 1 of 2
+(48892, 1, 23, 1280)
+(48892,)
+6
+(382, 1, 23, 1280)
+(382,)
+35
+Seizure 2 of 2
+(48984, 1, 23, 1280)
+(48984,)
+35
+(290, 1, 23, 1280)
+(290,)
+6
