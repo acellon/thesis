@@ -114,3 +114,13 @@ def make_epochs(filelist):
         prearray[j, :, :] = preicts[j]
 
     return normarray, ictarray, prearray
+
+def plotprob(npz, figoff=0):
+    for num in range(int(len(npz.files)/2)):
+        trues = '_'.join(['true',str(num+1)])
+        probs = '_'.join(['prob',str(num+1)])
+        x = np.arange(len(npz[probs]))
+        plt.figure(num+1+figoff)
+        plt.plot(x, npz[trues] * np.max(npz[probs]), x, npz[probs])
+        ttl = ' '.join(['Seizure', str(num+1)])
+        plt.title(ttl)
