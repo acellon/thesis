@@ -71,8 +71,8 @@ def nn_test(x_test, y_test, val_fn, prob_fn):
     print('Confusion matrix:\n', metrics.confusion_matrix(y_test, y_pred))
     print('Matthews Correlation Coefficient:', metrics.matthews_corrcoef(y_test, y_pred))
     print('-' * 80)
-    print(np.flatten(y_pred))
-    print(np.flatten(y_prob))
+    print(np.ravel(y_pred))
+    print(np.ravel(y_prob))
     print(y_test)
     print('=' * 80)
     return test_err, test_acc, y_pred, y_prob
@@ -195,7 +195,8 @@ for szr in range(1, num_szr + 1):
         plt.show()
 
     test_err, test_acc, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn)
-    savename = subj.get_name() + '_' + str(szr)
+    subjname = str(subj.get_name())
+    savename = '_'.join([subjname, str(szr)])
     prob_dict[savename] = y_prob
     test_accs[szr - 1] = test_acc
     sys.stdout.flush()
@@ -205,10 +206,12 @@ print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
       (num_szr, np.mean(test_accs) * 100))
 print('*' * 80)
 print()
-np.savez(subj.get_name() + 'probs.npz', prob_dict)
+
+subjname = str(subj.get_name())
+np.savez(''.join([subjname, 'probs.npz']), prob_dict)
 # Optionally, you could now dump the network weights to a file like this:
-np.savez(subj.get_name() + 'model.npz',
-         *lasagne.layers.get_all_param_values(net))
+#np.savez(''.join([subj.get_name(), 'model.npz']),
+#         *lasagne.layers.get_all_param_values(net))
 #
 # And load them again later on like this:
 # with np.load('model.npz') as f:
