@@ -71,8 +71,8 @@ def nn_test(x_test, y_test, val_fn, prob_fn):
     print('Confusion matrix:\n', metrics.confusion_matrix(y_test, y_pred))
     print('Matthews Correlation Coefficient:', metrics.matthews_corrcoef(y_test, y_pred))
     print('-' * 80)
-    print(np.ravel(y_pred))
     print(np.ravel(y_prob))
+    print(np.ravel(y_pred).astype('bool'))
     print(y_test)
     print('=' * 80)
     return test_err, test_acc, y_pred, y_prob
@@ -206,7 +206,7 @@ print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
 print('*' * 80)
 print()
 
-subjname = 'chb09'
+subjname = 'chb05'
 np.savez(''.join([subjname, 'out.npz']), **out_dict)
 # Optionally, you could now dump the network weights to a file like this:
 #np.savez(''.join([subj.get_name(), 'model.npz']),
