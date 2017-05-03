@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #SBATCH --job-name=chbnn.py
-#SBATCH --output=chb05_deep.o%j
+#SBATCH --output=chb09_deep.o%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=01:00:00
@@ -18,4 +18,4 @@ module load anaconda
 module load cudatoolkit
 module load intel-mkl
 source activate /tigress/acellon/theano
-python ./chbnn.py chb05 2 True
+python ./chbnn.py chb09 2 True

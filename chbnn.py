@@ -163,7 +163,7 @@ def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
 
-    np.savez(''.join([subject, 'out.npz']), **out_dict)
+    np.savez(''.join([subject, 'deep.npz']), **out_dict)
 
 if __name__ == '__main__':
     kwargs = {}
