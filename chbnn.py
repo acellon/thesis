@@ -43,7 +43,7 @@ def compile_model(input_var, target_var, net):
 
 # ##################### Testing function for ConvNet #######################
 
-def nn_test(x_test, y_test, val_fn, prob_fn):
+def nn_test(x_test, y_test, val_fn, prob_fn, batch_size=10):
     print('Test Results:')
     print('=' * 80)
 
@@ -159,12 +159,11 @@ def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
             plt.legend()
             plt.show()
 
-        test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn)
+        test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn, batch_size)
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
 
-    subjname = 'chb09'
-    np.savez(''.join([subjname, 'out.npz']), **out_dict)
+    np.savez(''.join([subject, 'out.npz']), **out_dict)
 
 if __name__ == '__main__':
     kwargs = {}
