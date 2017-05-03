@@ -1,3 +1,6 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
 def load_data(filelist, VERBOSE=False):
     # Pickle everything individually to get around file size pickle bug...
     folder, _ = filelist[0].get('filename').split('_')
