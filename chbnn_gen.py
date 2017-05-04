@@ -43,7 +43,7 @@ def compile_model(input_var, target_var, net):
 
 # ##################### Testing function for ConvNet #######################
 
-def nn_test(x_test, y_test, val_fn, prob_fn, batch_size=10):
+def nn_test(x_test, y_test, val_fn, prob_fn, batch_size=10, thresh=0.5):
     print('Test Results:')
     print('=' * 80)
 
@@ -59,7 +59,7 @@ def nn_test(x_test, y_test, val_fn, prob_fn, batch_size=10):
     print('-' * 80)
 
     y_prob = prob_fn(x_test)
-    y_pred = y_prob > 0.75
+    y_pred = y_prob > thresh
     print('Confusion matrix:\n', metrics.confusion_matrix(y_test, y_pred))
     print('Matthews Correlation Coefficient:', metrics.matthews_corrcoef(y_test, y_pred))
     #print('-' * 80)
@@ -83,7 +83,7 @@ def iterate_minibatches(inputs, targets, batchsize):
 # ############################## Main program ################################
 
 
-def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
+def main(subject='chb05', num_epochs=10, thresh=0.5, tiger=False, plotter=False):
     # Load the dataset
     subj = chb.load_dataset(subject, tiger=tiger)
     sys.stdout.flush()
@@ -154,11 +154,11 @@ def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
             plt.legend()
             plt.show()
 
-        test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn, batch_size)
+        test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn, batch_size, thresh)
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
 
-    np.savez(''.join([subject, 'win2.npz']), **out_dict)
+    np.savez(''.join([subject, 'winbig.npz']), **out_dict)
 
 if __name__ == '__main__':
     kwargs = {}
@@ -167,7 +167,9 @@ if __name__ == '__main__':
     if len(sys.argv) > 2:
         kwargs['num_epochs'] = int(sys.argv[2])
     if len(sys.argv) > 3:
-        kwargs['tiger'] = bool(sys.argv[3])
+        kwargs['thresh'] = float(sys.argv[3])
     if len(sys.argv) > 4:
-        kwargs['plotter'] = bool(sys.argv[4])
+        kwargs['tiger'] = bool(sys.argv[4])
+    if len(sys.argv) > 5:
+        kwargs['plotter'] = bool(sys.argv[5])
     main(**kwargs)
