@@ -59,13 +59,13 @@ def nn_test(x_test, y_test, val_fn, prob_fn, batch_size=10):
     print('-' * 80)
 
     y_prob = prob_fn(x_test)
-    y_pred = y_prob > 0.5
+    y_pred = y_prob > 0.75
     print('Confusion matrix:\n', metrics.confusion_matrix(y_test, y_pred))
     print('Matthews Correlation Coefficient:', metrics.matthews_corrcoef(y_test, y_pred))
-    print('-' * 80)
-    print(np.ravel(y_prob))
-    print(np.ravel(y_pred).astype('int'))
-    print(y_test)
+    #print('-' * 80)
+    #print(np.ravel(y_prob))
+    #print(np.ravel(y_pred).astype('int'))
+    #print(y_test)
     print('=' * 80)
     return test_err, y_pred, y_prob
 
