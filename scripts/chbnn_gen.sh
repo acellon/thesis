@@ -18,5 +18,5 @@ module load anaconda
 module load cudatoolkit
 module load intel-mkl
 source activate /tigress/acellon/theano
-echo CHB05 simple (thresh=0.75)
+echo 'CHB05 simple (thresh=0.75)'
 python ./chbnn_gen.py chb05 10 True
