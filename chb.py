@@ -37,7 +37,7 @@ def shuffle_in_unison(a, b):
 
 
 def to_hz(sec):
-    if type(sec) is int:
+    if type(sec) is int or type(sec) is float:
         return int(sec * 256)
     elif type(sec) is list:
         return [int(s * 256) for s in sec]
@@ -512,5 +512,86 @@ def lgus(subj, loonum, batchsec=60,  drop_prob=0, shuffle=True):
                 targets = np.asarray(lablist, dtype='int32')
                 #nonzero += np.count_nonzero(targets) #$#
                 imglist, lablist = [], []
+                yield inputs, targets
+        #print('nonzero for ',eeg.get_name(),':',nonzero) #$#
+
+
+def loowinTest(subj, loonum, batchsec=10):
+    batchhz = to_hz(batchsec)
+    imglen, stride = to_hz(5), to_hz(1)
+
+    looname, (ictstart, ictstop) = subj.get_ict()[loonum - 1]
+    loofile = subj.get_file(looname)
+    loofilelen = loofile.get_rec().shape[1]
+    testlist, testlabel = [], []
+    for start in range(0, loofilelen - imglen + to_hz(1), stride):
+        excerpt = loofile.get_rec()[:, start:start + imglen]
+        testlist.append(excerpt)
+        testlabel.append(int(loofile.is_ict(to_s(start))))
+        '''
+        if len(testlist) == batchsec:
+            inputs = np.asarray(testlist, dtype='float32')
+            inputs = np.expand_dims(inputs, axis=1)
+            targets = np.asarray(testlabel, dtype='int32')
+            testlist, testlabel = [], []
+            yield inputs, targets
+        '''
+    inputs = np.asarray(testlist, dtype='float32')
+    inputs = np.expand_dims(inputs, axis=1)
+    targets = np.asarray(testlabel, dtype='int32')
+    testlist, testlabel = [], []
+    return inputs, targets
+
+def loowinTrain(subj, loonum, batchsec=10):
+    imglen, stride = to_hz(5), to_hz(1)
+    looname, (y,z) = subj.get_ict()[loonum - 1]
+    for name, (istart, istop) in subj.get_ict():
+        if name == looname:
+            continue
+        eeg = subj.get_file(name)
+        eeglen = eeg.get_rec().shape[1]
+        #nonzero = 0 #$#
+        windows, labels = [], []
+        for start in range(0, eeglen - imglen + to_hz(1), stride):
+            excerpt = slice(start, start + imglen)
+            label = eeg.is_ict(to_s(start))
+            windows.append(eeg.get_rec()[:, excerpt])
+            labels.append(int(label))
+            if len(windows) == batchsec:
+                inputs = np.asarray(windows, dtype='float32')
+                inputs = np.expand_dims(inputs, axis=1)
+                targets = np.asarray(labels, dtype='int32')
+                #nonzero += np.count_nonzero(targets) #$#
+                windows, labels = [], []
+                yield inputs, targets
+        #print('nonzero for ',eeg.get_name(),':',nonzero) #$#
+
+def loowinTrainOS(subj, loonum, osr=4, batchsec=10):
+    imglen, stride = to_hz(5), to_hz(1)
+    looname, (y,z) = subj.get_ict()[loonum - 1]
+    for name, (istart, istop) in subj.get_ict():
+        if name == looname:
+            continue
+        eeg = subj.get_file(name)
+        eeglen = eeg.get_rec().shape[1]
+        #nonzero = 0 #$#
+        windows, labels = [], []
+        start = 0
+        while start < eeglen - imglen + to_hz(1):
+            excerpt = slice(start, start + imglen)
+            label = eeg.is_ict(to_s(start))
+            windows.append(eeg.get_rec()[:, excerpt])
+            labels.append(int(label))
+            start += stride
+            if to_s(start) == istart:
+                stride = to_hz(1.0/osr)
+            if to_s(start) == istop:
+                stride = to_hz(1)
+            if len(windows) == batchsec:
+                inputs = np.asarray(windows, dtype='float32')
+                inputs = np.expand_dims(inputs, axis=1)
+                targets = np.asarray(labels, dtype='int32')
+                #nonzero += np.count_nonzero(targets) #$#
+                windows, labels = [], []
                 yield inputs, targets
         #print('nonzero for ',eeg.get_name(),':',nonzero) #$#

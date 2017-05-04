@@ -1,7 +1,4 @@
 #!/usr/bin/env python
-"""
-First attempt at Lasagne with my real data.
-"""
 
 from __future__ import print_function
 
@@ -34,36 +31,31 @@ def compile_model(input_var, target_var, net):
     updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
 
     test_prediction = layers.get_output(net['out'], deterministic=True)
-
     test_loss = binary_crossentropy(test_prediction, target_var)
     test_loss = lasagne.objectives.aggregate(test_loss)
-    test_acc = T.mean(
-        binary_accuracy(test_prediction, target_var),
-        dtype=theano.config.floatX)
 
     train_fn = theano.function([input_var, target_var], loss, updates=updates)
-    val_fn = theano.function([input_var, target_var], [test_loss, test_acc])
+    val_fn = theano.function([input_var, target_var], test_loss)
     prob_fn = theano.function([input_var], test_prediction)
 
     return train_fn, val_fn, prob_fn
 
-def nn_test(x_test, y_test, val_fn, prob_fn):
+
+# ##################### Testing function for ConvNet #######################
+
+def nn_test(x_test, y_test, val_fn, prob_fn, batch_size=10):
     print('Test Results:')
     print('=' * 80)
 
     batch_err = []
-    batch_acc = []
     for batch in iterate_minibatches(x_test, y_test, batch_size):
         inputs, targets = batch
-        err, acc = val_fn(inputs, targets)
+        err = val_fn(inputs, targets)
         batch_err.append(err)
-        batch_acc.append(acc)
 
     test_err = np.mean(batch_err)
-    test_acc = np.mean(batch_acc)
 
     print('Test loss: %.6f' % test_err)
-    print('Test accuracy: %.2f' % (test_acc * 100))
     print('-' * 80)
 
     y_prob = prob_fn(x_test)
@@ -75,7 +67,7 @@ def nn_test(x_test, y_test, val_fn, prob_fn):
     print(np.ravel(y_pred).astype('int'))
     print(y_test)
     print('=' * 80)
-    return test_err, test_acc, y_pred, y_prob
+    return test_err, y_pred, y_prob
 
 
 # ############################# Batch iterator ###############################
@@ -90,129 +82,92 @@ def iterate_minibatches(inputs, targets, batchsize):
 
 # ############################## Main program ################################
 
-if len(sys.argv) > 1:
-    subject = sys.argv[1]
-else:
-    subject = 'chb01'
-if len(sys.argv) > 2:
-    num_epochs = int(sys.argv[2])
-else:
-    num_epochs = 50
-if len(sys.argv) > 3:
-    tiger = bool(sys.argv[3])
-else:
-    tiger = False
-if len(sys.argv) > 4:
-    plotter = bool(sys.argv[4])
-else:
-    plotter = False
 
-# Load the dataset
-subj = chb.load_dataset(subject, tiger=tiger)
-sys.stdout.flush()
-batch_size = 10
-
-num_szr = subj.get_num()
-test_accs = [0] * num_szr
-out_dict = {}
-for szr in range(1, num_szr + 1):
-    print('\nLeave-One-Out: %d of %d' % (szr, num_szr))
-
-    input_var = T.tensor4('inputs')
-    target_var = T.ivector('targets')
-    net = nw.simple(input_var)
-    train_fn, val_fn, prob_fn = compile_model(input_var, target_var, net)
-
-    train_err_list = [0] * num_epochs
-    val_err_list   = [0] * num_epochs
-    val_acc_list   = [0] * num_epochs
-
-    print('=' * 80)
-    print('| epoch \t| train loss\t| val loss\t| val acc\t| time\t')
-    print('=' * 80)
-
-    x_test, y_test = 0, 0
-    for epoch in range(num_epochs):
-        st = time.clock()
-        # make generator
-        loo_gen = chb.lgus(subj, szr, batchsec=60, drop_prob=0.8, shuffle=True)
-        # get test data (same on every epoch, so not really using it until the
-        # last go-round)
-        for batch in loo_gen:
-            x_test, y_test = batch
-            break
-        # separate val and train data
-        x_val = np.zeros((1000, 1, 23, 1280), dtype='float32')
-        y_val = np.zeros((1000), dtype='int32')
-
-        x_train, y_train = 0, 0
-        batch_train_errs = []
-        for idx, batch in enumerate(loo_gen):
-            x_train, y_train = batch
-            if idx < 1000:
-                x_train, x_val[idx] = x_train[:-1], x_train[-1:]
-                y_train, y_val[idx] = y_train[:-1], y_train[-1:]
-            err = train_fn(x_train, y_train)
-            batch_train_errs.append(err)
-        epoch_train_err = np.mean(batch_train_errs)
-        train_err_list[epoch] = epoch_train_err
-
-        batch_val_errs = [0] * int(1000/batch_size)
-        batch_val_accs = [0] * int(1000/batch_size)
-        for idx, batch in enumerate(iterate_minibatches(x_val, y_val,
-                                                        batch_size)):
-            inputs, targets = batch
-            err, acc = val_fn(inputs, targets)
-            batch_val_errs[idx] = err
-            batch_val_accs[idx] = acc
-        epoch_val_err = np.mean(batch_val_errs)
-        val_err_list[epoch] = epoch_val_err
-        epoch_val_acc = np.mean(batch_val_accs)
-        val_acc_list[epoch] = epoch_val_acc
-
-        en = time.clock()
-        print('| %d \t\t| %.6f\t| %.6f\t| %.2f%%\t| %.2f s' %
-              (epoch + 1, epoch_train_err, epoch_val_err, epoch_val_acc * 100, en - st))
-    print('-' * 80)
-
-
-    print('Training Complete.\n')
-    if plotter:
-        fig = plt.figure()
-        plt.plot(range(num_epochs), train_err, label='Training error')
-        plt.plot(range(num_epochs), val_err, label='Validation error')
-        plt.title('ConvNet Training')
-        plt.xlabel('Epochs')
-        plt.ylabel('Error')
-        plt.legend()
-        plt.show()
-
-        fig2 = plt.figure()
-        plt.plot(range(num_epochs), np.asarray(val_acc) * 100)
-        plt.title('ConvNet Training: Validation accuracy')
-        plt.xlabel('Epochs')
-        plt.ylabel('Accuracy')
-        plt.show()
-
-    test_err, test_acc, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn)
-    out_dict['_'.join(['prob', str(szr)])] = y_prob
-    out_dict['_'.join(['true', str(szr)])] = y_test
-    test_accs[szr - 1] = test_acc
+def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
+    # Load the dataset
+    subj = chb.load_dataset(subject, tiger=tiger)
     sys.stdout.flush()
+    batch_size = 10
 
-print('*' * 80)
-print('Average test accuracy for %d Leave-One-Out tests: %.2f' %
-      (num_szr, np.mean(test_accs) * 100))
-print('*' * 80)
-print()
+    num_szr = subj.get_num()
+    test_accs = [0] * num_szr
+    out_dict = {}
+    for szr in range(1, num_szr + 1):
+        print('\nLeave-One-Out: %d of %d' % (szr, num_szr))
 
-subjname = 'chb09'
-np.savez(''.join([subjname, 'out.npz']), **out_dict)
-# Optionally, you could now dump the network weights to a file like this:
-#np.savez(''.join([subj.get_name(), 'model.npz']),
-#         *lasagne.layers.get_all_param_values(net))
-#
-# And load them again later on like this:
-# with np.load('model.npz') as f:
-#     param_values = [f['arr_%d' % i] for i in range(len(f.files))]
-# lasagne.layers.set_all_param_values(network, param_values)
+        input_var = T.tensor4('inputs')
+        target_var = T.ivector('targets')
+        net = nw.deep1(input_var)
+        train_fn, val_fn, prob_fn = compile_model(input_var, target_var, net)
+
+        train_err_list = [0] * num_epochs
+        val_err_list   = [0] * num_epochs
+
+        print('=' * 80)
+        print('| epoch \t| train loss\t| val loss\t| time\t')
+        print('=' * 80)
+
+        x_test, y_test = chb.loowinTest(subj, szr)
+        for epoch in range(num_epochs):
+            st = time.clock()
+            # make generator
+            data = chb.looWinTrainOS(subj, szr)
+            # separate val and train data
+            #x_val = np.zeros((1000, 1, 23, 1280), dtype='float32')
+            #y_val = np.zeros((1000), dtype='int32')
+
+            batch_train_errs = []
+            for idx, batch in enumerate(data):
+                x_train, y_train = batch
+                #if idx < 1000:
+                #    x_train, x_val[idx] = x_train[:-1], x_train[-1:]
+                #    y_train, y_val[idx] = y_train[:-1], y_train[-1:]
+                err = train_fn(x_train, y_train)
+                batch_train_errs.append(err)
+            epoch_train_err = np.mean(batch_train_errs)
+            train_err_list[epoch] = epoch_train_err
+            '''
+            batch_val_errs = [0] * int(1000/batch_size)
+            for idx, batch in enumerate(iterate_minibatches(x_val, y_val,
+                                                            batch_size)):
+                inputs, targets = batch
+                err = val_fn(inputs, targets)
+                batch_val_errs[idx] = err
+            epoch_val_err = np.mean(batch_val_errs)
+            val_err_list[epoch] = epoch_val_err
+            '''
+            epoch_val_err = 1
+            en = time.clock()
+            print('| %d \t\t| %.6f\t| %.6f\t| %.2f s' %
+                  (epoch + 1, epoch_train_err, epoch_val_err, en - st))
+        print('-' * 80)
+
+
+        print('Training Complete.\n')
+        if plotter:
+            fig = plt.figure()
+            plt.plot(range(num_epochs), train_err, label='Training error')
+            plt.plot(range(num_epochs), val_err, label='Validation error')
+            plt.title('ConvNet Training')
+            plt.xlabel('Epochs')
+            plt.ylabel('Error')
+            plt.legend()
+            plt.show()
+
+        test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn, batch_size)
+        out_dict['_'.join(['prob', str(szr)])] = y_prob
+        out_dict['_'.join(['true', str(szr)])] = y_test
+
+    np.savez(''.join([subject, 'deep.npz']), **out_dict)
+
+if __name__ == '__main__':
+    kwargs = {}
+    if len(sys.argv) > 1:
+        kwargs['subject'] = sys.argv[1]
+    if len(sys.argv) > 2:
+        kwargs['num_epochs'] = int(sys.argv[2])
+    if len(sys.argv) > 3:
+        kwargs['tiger'] = bool(sys.argv[3])
+    if len(sys.argv) > 4:
+        kwargs['plotter'] = bool(sys.argv[4])
+    main(**kwargs)
