@@ -157,8 +157,10 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, tiger=False, plotter=False)
         test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn, batch_size, thresh)
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
+        np.savez(''.join(['/outputs/',subject,'LOO',str(szr),'model.npz']), *lasagne.layers.get_all_param_values(net))
 
-    np.savez(''.join([subject, 'winbig.npz']), **out_dict)
+
+    np.savez(''.join([subject, 'simpletest.npz']), **out_dict)
 
 if __name__ == '__main__':
     kwargs = {}
