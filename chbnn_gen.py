@@ -97,7 +97,7 @@ def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
 
         input_var = T.tensor4('inputs')
         target_var = T.ivector('targets')
-        net = nw.deep1(input_var)
+        net = nw.simple(input_var)
         train_fn, val_fn, prob_fn = compile_model(input_var, target_var, net)
 
         train_err_list = [0] * num_epochs
@@ -158,7 +158,7 @@ def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
 
-    np.savez(''.join([subject, 'windeep.npz']), **out_dict)
+    np.savez(''.join([subject, 'win.npz']), **out_dict)
 
 if __name__ == '__main__':
     kwargs = {}
