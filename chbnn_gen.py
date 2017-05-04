@@ -111,7 +111,7 @@ def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
         for epoch in range(num_epochs):
             st = time.clock()
             # make generator
-            data = chb.looWinTrainOS(subj, szr)
+            data = chb.loowinTrainOS(subj, szr)
             # separate val and train data
             #x_val = np.zeros((1000, 1, 23, 1280), dtype='float32')
             #y_val = np.zeros((1000), dtype='int32')
@@ -158,7 +158,7 @@ def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
 
-    np.savez(''.join([subject, 'deep.npz']), **out_dict)
+    np.savez(''.join([subject, 'windeep.npz']), **out_dict)
 
 if __name__ == '__main__':
     kwargs = {}
