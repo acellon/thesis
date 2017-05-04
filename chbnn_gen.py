@@ -104,7 +104,7 @@ def main(subject='chb05', num_epochs=10, tiger=False, plotter=False):
         val_err_list   = [0] * num_epochs
 
         print('=' * 80)
-        print('| epoch \t| train loss\t| val loss\t| time\t')
+        print('| epoch\t\t| train loss\t| val loss\t| time\t')
         print('=' * 80)
 
         x_test, y_test = chb.loowinTest(subj, szr)
