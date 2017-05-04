@@ -28,7 +28,7 @@ def compile_model(input_var, target_var, net):
     loss = lasagne.objectives.aggregate(loss)
 
     params = layers.get_all_params(net['out'], trainable=True)
-    updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
+    updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-4)
 
     test_prediction = layers.get_output(net['out'], deterministic=True)
     test_loss = binary_crossentropy(test_prediction, target_var)
@@ -83,7 +83,8 @@ def iterate_minibatches(inputs, targets, batchsize):
 # ############################## Main program ################################
 
 
-def main(subject='chb05', num_epochs=10, thresh=0.5, tiger=False, plotter=False):
+def main(subject='chb05', num_epochs=10, thresh=0.5,
+         tiger=False, tag='test', plotter=False):
     # Load the dataset
     subj = chb.load_dataset(subject, tiger=tiger)
     sys.stdout.flush()
@@ -111,7 +112,7 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, tiger=False, plotter=False)
         for epoch in range(num_epochs):
             st = time.clock()
             # make generator
-            data = chb.loowinTrainOS(subj, szr)
+            data = chb.loowinTrainOS(subj, szr, osr=4)
             # separate val and train data
             #x_val = np.zeros((1000, 1, 23, 1280), dtype='float32')
             #y_val = np.zeros((1000), dtype='int32')
@@ -157,10 +158,10 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, tiger=False, plotter=False)
         test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn, batch_size, thresh)
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
-        np.savez(''.join(['/outputs/',subject,'LOO',str(szr),'model.npz']), *lasagne.layers.get_all_param_values(net))
+        np.savez(''.join(['./outputs/',subject,'model','LOO',str(szr),tag,'.npz']), *lasagne.layers.get_all_param_values(net['out']))
 
 
-    np.savez(''.join([subject, 'simpletest.npz']), **out_dict)
+    np.savez(''.join([subject, tag, '.npz']), **out_dict)
 
 if __name__ == '__main__':
     kwargs = {}
@@ -173,5 +174,7 @@ if __name__ == '__main__':
     if len(sys.argv) > 4:
         kwargs['tiger'] = bool(sys.argv[4])
     if len(sys.argv) > 5:
-        kwargs['plotter'] = bool(sys.argv[5])
+        kwargs['tag'] = sys.argv[5]
+    if len(sys.argv) > 6:
+        kwargs['plotter'] = bool(sys.argv[6])
     main(**kwargs)

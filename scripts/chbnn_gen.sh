@@ -1,13 +1,13 @@
 #!/bin/sh
 
 #SBATCH --job-name=chbnn_gen.py
-#SBATCH --output=chb05_simpletest.o%j
+#SBATCH --output=chb01_testsmall.o%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=08:00:00
+#SBATCH --time=10:00:00
 #SBATCH --workdir=/home/acellon/thesis
 #SBATCH --gres=gpu:1
-#SBATCH --mem=32GB
+#SBATCH --mem=48GB
 #SBATCH --mail-type=end
 #SBATCH --mail-user=acellon@princeton.edu
 
@@ -18,5 +18,5 @@ module load anaconda
 module load cudatoolkit
 module load intel-mkl
 source activate /tigress/acellon/theano
-echo 'CHB05 simple (thresh=0.8)'
-python ./chbnn_gen.py chb05 75 0.8 True
+echo 'CHB01 simple (thresh=0.8, learning_rate=1e-4)'
+python ./chbnn_gen.py chb01 2 0.8 True testsmall
