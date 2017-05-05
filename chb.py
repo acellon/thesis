@@ -398,23 +398,23 @@ def epoch_gen(subj, batchsec=10, shuffle=False):
 
 def loo_gen(subj, loonum, batchsec=10, shuffle=False):
     batchhz = to_hz(batchsec)
-    imglen, stride = to_hz(5), to_hz(1)
+    winlen, stride = to_hz(5), to_hz(1)
 
     looname, (ictstart, ictstop) = subj.get_ict()[loonum - 1]
     loofile = subj.get_file(looname)
-    loofilelensec = to_s(loofile.get_rec().shape[1])
+    loolensec = to_s(loofile.get_rec().shape[1])
     if ictstart < 500:
         loostart = 0
         loostop = loostart + 1000
-    elif ictstop > loofilelensec - 505:
-        loostop = loofilelensec - 6
+    elif ictstop > loolensec - 505:
+        loostop = loolensec - 6
         loostart = loostop - 1000
     else:
         loostart = ictstart - 500
         loostop = loostart + 1000
     testlist, testlabel = [], []
     for start in range(loostart, loostop, to_s(stride)):
-        excerpt = loofile.get_rec()[:, to_hz(start):to_hz(start) + imglen]
+        excerpt = loofile.get_rec()[:, to_hz(start):to_hz(start) + winlen]
         testlist.append(excerpt)
         testlabel.append(int(loofile.is_ict(start)))
     inputs = np.asarray(testlist, dtype='float32')
@@ -428,7 +428,7 @@ def loo_gen(subj, loonum, batchsec=10, shuffle=False):
         #nonzero = 0 #$#
         if (eeg.get_name() == looname):
             first = list(range(to_hz(loostart)))
-            last = list(range(to_hz(loostop), to_hz(loofilelensec - 6)))
+            last = list(range(to_hz(loostop), to_hz(loolensec - 6)))
             fullList = first + last
             indices = np.asarray(fullList)
         else:
@@ -437,8 +437,8 @@ def loo_gen(subj, loonum, batchsec=10, shuffle=False):
             np.random.shuffle(indices)
         indlen = len(indices)
         imglist, lablist = [], []
-        for idx, start in enumerate(range(0, indlen - imglen + to_hz(1), stride)):
-            excerpt = indices[start:start + imglen]
+        for idx, start in enumerate(range(0, indlen - winlen + to_hz(1), stride)):
+            excerpt = indices[start:start + winlen]
             exStart = np.asscalar(excerpt[0])
             label = eeg.is_ict(to_s(exStart))
 
@@ -460,12 +460,12 @@ def lgus(subj, loonum, batchsec=60,  drop_prob=0, shuffle=True):
     # return the testing data on the first pass through the generator
     looname, (ictstart, ictstop) = subj.get_ict()[loonum - 1]
     loofile = subj.get_file(looname)
-    loofilelensec = to_s(loofile.get_rec().shape[1])
+    loolensec = to_s(loofile.get_rec().shape[1])
     if ictstart < 500:
         loostart = 0
         loostop = loostart + 1000
-    elif ictstop > loofilelensec - 505:
-        loostop = loofilelensec - 6
+    elif ictstop > loolensec - 505:
+        loostop = loolensec - 6
         loostart = loostop - 1000
     else:
         loostart = ictstart - 500
@@ -488,7 +488,7 @@ def lgus(subj, loonum, batchsec=60,  drop_prob=0, shuffle=True):
         #nonzero = 0 #$#
         if (eeg.get_name() == looname):
             first = list(range(to_hz(loostart)))
-            last = list(range(to_hz(loostop), to_hz(loofilelensec - 6)))
+            last = list(range(to_hz(loostop), to_hz(loolensec - 6)))
             fullList = first + last
             indices = np.asarray(fullList)
         else:
@@ -518,68 +518,38 @@ def lgus(subj, loonum, batchsec=60,  drop_prob=0, shuffle=True):
 
 def loowinTest(subj, loonum, batchsec=10):
     batchhz = to_hz(batchsec)
-    imglen, stride = to_hz(5), to_hz(1)
+    winlen, stride = to_hz(5), to_hz(1)
 
-    looname, (ictstart, ictstop) = subj.get_ict()[loonum - 1]
+    looname, _ = subj.get_ict()[loonum - 1]
     loofile = subj.get_file(looname)
-    loofilelen = loofile.get_rec().shape[1]
+    loolen = loofile.get_rec().shape[1]
     testlist, testlabel = [], []
-    for start in range(0, loofilelen - imglen + to_hz(1), stride):
-        excerpt = loofile.get_rec()[:, start:start + imglen]
+    for start in range(0, loolen - winlen + to_hz(1), stride):
+        excerpt = loofile.get_rec()[:, start:start + winlen]
         testlist.append(excerpt)
         testlabel.append(int(loofile.is_ict(to_s(start))))
-        '''
-        if len(testlist) == batchsec:
-            inputs = np.asarray(testlist, dtype='float32')
-            inputs = np.expand_dims(inputs, axis=1)
-            targets = np.asarray(testlabel, dtype='int32')
-            testlist, testlabel = [], []
-            yield inputs, targets
-        '''
     inputs = np.asarray(testlist, dtype='float32')
     inputs = np.expand_dims(inputs, axis=1)
     targets = np.asarray(testlabel, dtype='int32')
     testlist, testlabel = [], []
     return inputs, targets
 
-def loowinTrain(subj, loonum, batchsec=10):
-    imglen, stride = to_hz(5), to_hz(1)
-    looname, (y,z) = subj.get_ict()[loonum - 1]
+def loowinTrain(subj, loonum, osr=1, usp=0, batchsec=10):
+    winlen, stride = to_hz(5), to_hz(1)
+    looname, _ = subj.get_ict()[loonum - 1]
     for name, (istart, istop) in subj.get_ict():
         if name == looname:
             continue
         eeg = subj.get_file(name)
         eeglen = eeg.get_rec().shape[1]
-        #nonzero = 0 #$#
-        windows, labels = [], []
-        for start in range(0, eeglen - imglen + to_hz(1), stride):
-            excerpt = slice(start, start + imglen)
-            label = eeg.is_ict(to_s(start))
-            windows.append(eeg.get_rec()[:, excerpt])
-            labels.append(int(label))
-            if len(windows) == batchsec:
-                inputs = np.asarray(windows, dtype='float32')
-                inputs = np.expand_dims(inputs, axis=1)
-                targets = np.asarray(labels, dtype='int32')
-                #nonzero += np.count_nonzero(targets) #$#
-                windows, labels = [], []
-                yield inputs, targets
-        #print('nonzero for ',eeg.get_name(),':',nonzero) #$#
-
-def loowinTrainOS(subj, loonum, osr=4, batchsec=10):
-    imglen, stride = to_hz(5), to_hz(1)
-    looname, (y,z) = subj.get_ict()[loonum - 1]
-    for name, (istart, istop) in subj.get_ict():
-        if name == looname:
-            continue
-        eeg = subj.get_file(name)
-        eeglen = eeg.get_rec().shape[1]
-        #nonzero = 0 #$#
         windows, labels = [], []
         start = 0
-        while start < eeglen - imglen + to_hz(1):
-            excerpt = slice(start, start + imglen)
+        while start < eeglen - winlen + to_hz(1):
+            excerpt = slice(start, start + winlen)
             label = eeg.is_ict(to_s(start))
+            if (not label) and (np.random.random() < usp):
+                start += stride
+                continue
             windows.append(eeg.get_rec()[:, excerpt])
             labels.append(int(label))
             start += stride
@@ -591,7 +561,5 @@ def loowinTrainOS(subj, loonum, osr=4, batchsec=10):
                 inputs = np.asarray(windows, dtype='float32')
                 inputs = np.expand_dims(inputs, axis=1)
                 targets = np.asarray(labels, dtype='int32')
-                #nonzero += np.count_nonzero(targets) #$#
                 windows, labels = [], []
                 yield inputs, targets
-        #print('nonzero for ',eeg.get_name(),':',nonzero) #$#
