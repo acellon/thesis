@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #SBATCH --job-name=chbnn_gen.py
-#SBATCH --output=chb09testlw.o%j
+#SBATCH --output=chb09testus.o%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --time=01:00:00
@@ -18,5 +18,5 @@ module load anaconda
 module load cudatoolkit
 module load intel-mkl
 source activate /tigress/acellon/theano
-echo 'CHB09 simple test of loowin (thresh=0.75, learning_rate=1e-4)'
-python ./chbnn_gen.py chb09 2 0.75 True testlw
+echo 'CHB09 simple test of loowin (thresh=0.75, learning_rate=1e-4, usp=0.8, osr=4)'
+python ./chbnn_gen.py chb09 2 0.75 True testus

@@ -112,7 +112,7 @@ def main(subject='chb05', num_epochs=10, thresh=0.5,
         for epoch in range(num_epochs):
             st = time.clock()
             # make generator
-            data = chb.loowinTrain(subj, szr, osr=4, usp=0)
+            data = chb.loowinTrain(subj, szr, osr=4, usp=0.8)
             # separate val and train data
             #x_val = np.zeros((1000, 1, 23, 1280), dtype='float32')
             #y_val = np.zeros((1000), dtype='int32')
