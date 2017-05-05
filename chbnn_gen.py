@@ -28,7 +28,7 @@ def compile_model(input_var, target_var, net):
     loss = lasagne.objectives.aggregate(loss)
 
     params = layers.get_all_params(net['out'], trainable=True)
-    updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-4)
+    updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
 
     test_prediction = layers.get_output(net['out'], deterministic=True)
     test_loss = binary_crossentropy(test_prediction, target_var)
