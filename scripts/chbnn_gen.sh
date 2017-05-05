@@ -1,10 +1,10 @@
 #!/bin/sh
 
 #SBATCH --job-name=chbnn_gen.py
-#SBATCH --output=chb09testus.o%j
+#SBATCH --output=chb05thurs2.o%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=01:00:00
+#SBATCH --time=08:00:00
 #SBATCH --workdir=/home/acellon/thesis
 #SBATCH --gres=gpu:1
 #SBATCH --mem=32GB
@@ -18,5 +18,6 @@ module load anaconda
 module load cudatoolkit
 module load intel-mkl
 source activate /tigress/acellon/theano
-echo 'CHB09 simple test of loowin (thresh=0.75, learning_rate=1e-4, usp=0.8, osr=4)'
-python ./chbnn_gen.py chb09 2 0.75 True testus
+echo 'CHB05 simple (thresh=0.8, osr=4, usp=0.8)'
+#          subj num_epochs thresh osr usp tiger tag
+python ./chbnn_gen.py chb05 50 0.8 4 0.8 True thurs2

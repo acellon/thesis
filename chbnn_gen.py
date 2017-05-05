@@ -83,7 +83,7 @@ def iterate_minibatches(inputs, targets, batchsize):
 # ############################## Main program ################################
 
 
-def main(subject='chb05', num_epochs=10, thresh=0.5,
+def main(subject='chb05', num_epochs=10, thresh=0.5, osr=1, usp=0,
          tiger=False, tag='test', plotter=False):
     # Load the dataset
     subj = chb.load_dataset(subject, tiger=tiger)
@@ -112,7 +112,7 @@ def main(subject='chb05', num_epochs=10, thresh=0.5,
         for epoch in range(num_epochs):
             st = time.clock()
             # make generator
-            data = chb.loowinTrain(subj, szr, osr=4, usp=0.8)
+            data = chb.loowinTrain(subj, szr, osr, usp)
             # separate val and train data
             #x_val = np.zeros((1000, 1, 23, 1280), dtype='float32')
             #y_val = np.zeros((1000), dtype='int32')
@@ -172,9 +172,13 @@ if __name__ == '__main__':
     if len(sys.argv) > 3:
         kwargs['thresh'] = float(sys.argv[3])
     if len(sys.argv) > 4:
-        kwargs['tiger'] = bool(sys.argv[4])
+        kwargs['osr'] = int(sys.argv[4])
     if len(sys.argv) > 5:
-        kwargs['tag'] = sys.argv[5]
+        kwargs['usp'] = float(sys.argv[5])
     if len(sys.argv) > 6:
-        kwargs['plotter'] = bool(sys.argv[6])
+        kwargs['tiger'] = bool(sys.argv[6])
+    if len(sys.argv) > 7:
+        kwargs['tag'] = sys.argv[7]
+    if len(sys.argv) > 8:
+        kwargs['plotter'] = bool(sys.argv[8])
     main(**kwargs)
