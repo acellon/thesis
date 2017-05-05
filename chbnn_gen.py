@@ -29,6 +29,7 @@ def compile_model(input_var, target_var, net):
 
     params = layers.get_all_params(net['out'], trainable=True)
     updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
+    #updates = lasagne.updates.adam(loss, params)
 
     test_prediction = layers.get_output(net['out'], deterministic=True)
     test_loss = binary_crossentropy(test_prediction, target_var)
@@ -158,7 +159,7 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, osr=1, usp=0,
         test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn, batch_size, thresh)
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
-        np.savez(''.join(['./outputs/',subject,'model','LOO',str(szr),tag,'.npz']), *lasagne.layers.get_all_param_values(net['out']))
+        #np.savez(''.join(['./outputs/',subject,'model','LOO',str(szr),tag,'.npz']), *lasagne.layers.get_all_param_values(net['out']))
 
 
     np.savez(''.join([subject, tag, '.npz']), **out_dict)
