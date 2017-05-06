@@ -3,15 +3,19 @@ import matplotlib.pyplot as plt
 import sys, os
 import scipy.io as sio
 
-def plotprob(npz, figoff=0):
+def plotprob(npz, thresh=0.8):
     for num in range(int(len(npz.files)/2)):
         trues = '_'.join(['true',str(num+1)])
         probs = '_'.join(['prob',str(num+1)])
-        x = np.arange(len(npz[probs]))
-        plt.figure(num+1+figoff)
-        plt.plot(x, npz[probs], x, npz[trues] * np.max(npz[probs]))
+        thr = np.ones(len(npz[trues]))*thresh
+        plt.figure(num+1)
+        #plt.axvspan(npz[trues].nonzero()[0][0],npz[trues].nonzero()[0][-1], alpha=0.25, color='r')
+        plt.plot(npz[probs])
+        plt.plot(npz[trues])
+        plt.plot(thr)
         ttl = ' '.join(['Seizure', str(num+1)])
         plt.title(ttl)
+        #plt.grid()
 
 
 def plotflip(npz, figoff=0):
