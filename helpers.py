@@ -38,3 +38,27 @@ def convertLucy(dirpath):
             prob[inds[i]] = temp['ySVMSO'][i]
             true[inds[i]] = int(temp['trueLabels'][i]>0)
         np.savez(file_, svmprob=prob, true=true)
+
+def szr_pc(subj, osr=1, usp=0):
+    total, seizure = 0, 0
+    for file_, (start, stop) in subj.get_ict():
+        total += to_s(subj.get_file(file_).get_rec().shape[1])
+        seizure += (stop - start)
+    return ((seizure * osr)/(total * (1 - usp))) * 100
+
+def to_s(hz):
+    if type(hz) is int:
+        return int(hz / 256)
+    elif type(hz) is list:
+        return [int(hz / 256) for f in hz]
+    elif type(hz) is np.ndarray:
+        return hz / 256
+
+def metrics(npz, thresh=0.8):
+    npzlen = int(len(npz.files)/2)
+    for i in range(1, npzlen + 1):
+        pred = (npz['_'.join(['prob', str(i)])] > thresh).astype('int32')
+        mcc = matthews_corrcoef(npz['_'.join(['true', str(i)])], pred)
+        cm = confusion_matrix(npz['_'.join(['true', str(i)])], pred)
+        print('Matthews Correlation Coefficient: \t{}'.format(mcc))
+        print('Confusion matrix:\n{}'.format(cm))
