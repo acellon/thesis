@@ -550,8 +550,11 @@ def loowinTrain(subj, loonum, osr=1, usp=0, batchsec=10):
             if (not label) and (np.random.random() < usp):
                 start += stride
                 continue
-            windows.append(eeg.get_rec()[:, excerpt])
-            labels.append(int(label))
+            recExcerpt = eeg.get_rec()[:, excerpt]
+            exLen = recExcerpt.shape[1]
+            if exLen == winlen:
+                windows.append(recExcerpt)
+                labels.append(int(label))
             start += stride
             if to_s(start) == istart:
                 stride = to_hz(1.0/osr)

@@ -63,10 +63,6 @@ def nn_test(x_test, y_test, val_fn, prob_fn, batch_size=10, thresh=0.5):
     y_pred = y_prob > thresh
     print('Confusion matrix:\n', metrics.confusion_matrix(y_test, y_pred))
     print('Matthews Correlation Coefficient:', metrics.matthews_corrcoef(y_test, y_pred))
-    #print('-' * 80)
-    #print(np.ravel(y_prob))
-    #print(np.ravel(y_pred).astype('int'))
-    #print(y_test)
     print('=' * 80)
     return test_err, y_pred, y_prob
 
@@ -106,42 +102,26 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, osr=1, usp=0,
         val_err_list   = [0] * num_epochs
 
         print('=' * 80)
-        print('| epoch\t\t| train loss\t| val loss\t| time\t')
+        print('| epoch\t\t| train loss\t\t| time\t')
         print('=' * 80)
 
         x_test, y_test = chb.loowinTest(subj, szr)
         for epoch in range(num_epochs):
             st = time.clock()
             # make generator
-            data = chb.loowinTrain(subj, szr, osr, usp)
-            # separate val and train data
-            #x_val = np.zeros((1000, 1, 23, 1280), dtype='float32')
-            #y_val = np.zeros((1000), dtype='int32')
+            data = chb.loowinTrain(subj, szr, osr, usp)\
 
             batch_train_errs = []
             for idx, batch in enumerate(data):
                 x_train, y_train = batch
-                #if idx < 1000:
-                #    x_train, x_val[idx] = x_train[:-1], x_train[-1:]
-                #    y_train, y_val[idx] = y_train[:-1], y_train[-1:]
                 err = train_fn(x_train, y_train)
                 batch_train_errs.append(err)
             epoch_train_err = np.mean(batch_train_errs)
             train_err_list[epoch] = epoch_train_err
-            '''
-            batch_val_errs = [0] * int(1000/batch_size)
-            for idx, batch in enumerate(iterate_minibatches(x_val, y_val,
-                                                            batch_size)):
-                inputs, targets = batch
-                err = val_fn(inputs, targets)
-                batch_val_errs[idx] = err
-            epoch_val_err = np.mean(batch_val_errs)
-            val_err_list[epoch] = epoch_val_err
-            '''
-            epoch_val_err = 1
+
             en = time.clock()
-            print('| %d \t\t| %.6f\t| %.6f\t| %.2f s' %
-                  (epoch + 1, epoch_train_err, epoch_val_err, en - st))
+            print('| %d \t\t| %.6f\t\t| %.2f s' %
+                  (epoch + 1, epoch_train_err, en - st))
             sys.stdout.flush()
         print('-' * 80)
 
