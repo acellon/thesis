@@ -44,7 +44,7 @@ def szr_pc(subj, osr=1, usp=0):
     for file_, (start, stop) in subj.get_ict():
         total += to_s(subj.get_file(file_).get_rec().shape[1])
         seizure += (stop - start)
-    return ((seizure * osr)/(total * (1 - usp))) * 100
+    return ((seizure * osr)/((total - seizure) * (1 - usp)))
 
 def to_s(hz):
     if type(hz) is int:
