@@ -142,6 +142,7 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, osr=1, usp=0,
             en = time.clock()
             print('| %d \t\t| %.6f\t| %.6f\t| %.2f s' %
                   (epoch + 1, epoch_train_err, epoch_val_err, en - st))
+            sys.stdout.flush()
         print('-' * 80)
 
 

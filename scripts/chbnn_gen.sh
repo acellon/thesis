@@ -1,13 +1,13 @@
 #!/bin/sh
 
-#SBATCH --job-name=chbnn_gen.py
-#SBATCH --output=chb19init.o%j
+#SBATCH --job-name=chb24init
+#SBATCH --output=chb24init.o%j
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --time=02:00:00
+#SBATCH --time=04:00:00
 #SBATCH --workdir=/home/acellon/thesis
 #SBATCH --gres=gpu:1
-#SBATCH --mem=8GB
+#SBATCH --mem=32GB
 #SBATCH --mail-type=end
 #SBATCH --mail-user=acellon@princeton.edu
 
@@ -18,6 +18,6 @@ module load anaconda
 module load cudatoolkit
 module load intel-mkl
 source activate /tigress/acellon/theano
-echo 'CHB19 simple, thresh=0.8, osr=4, usp=0.6, using adam w learn=1e-5'
+echo 'CHB24 simple, thresh=0.8, osr=4, usp=0.6, learn=1e-5'
 #          subj num_epochs thresh osr usp tiger tag
-python ./chbnn_gen.py chb19 25 0.8 4 0.6 True init
+python ./chbnn_gen.py chb24 50 0.8 4 0.6 True init
