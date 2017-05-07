@@ -27,14 +27,14 @@ def simple2(input_var):
     net['data'] = InputLayer(inshape, input_var=input_var)
     net['conv1'] = Conv2DLayer(
         net['data'],
-        num_filters=20, filter_size=(1, 255), stride=(1, 32), pad='same',
+        num_filters=8, filter_size=(1, 255), stride=(1, 32), pad='same',
         nonlinearity=rectify)
     net['conv2'] = Conv2DLayer(
         net['conv1'],
-        num_filters=20, filter_size=(1, 127), stride=(1, 32), pad='same',
+        num_filters=8, filter_size=(1, 127), stride=(1, 32), pad='same',
         nonlinearity=rectify)
     net['pool'] = MaxPool2DLayer(net['conv2'], pool_size=(1, 2))
-    net['fcl'] = DenseLayer(net['pool'], num_units=64, nonlinearity=rectify)
+    net['fcl'] = DenseLayer(net['pool'], num_units=100, nonlinearity=rectify)
     net['out'] = DenseLayer(
         net['fcl'], num_units=outshape, nonlinearity=sigmoid)
     return net
