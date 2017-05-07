@@ -95,7 +95,7 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, osr=1, usp=0,
 
         input_var = T.tensor4('inputs')
         target_var = T.ivector('targets')
-        net = nw.simple(input_var)
+        net = nw.simple2(input_var)
         train_fn, val_fn, prob_fn = compile_model(input_var, target_var, net)
 
         train_err_list = [0] * num_epochs
