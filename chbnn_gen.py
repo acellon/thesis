@@ -28,7 +28,6 @@ def compile_model(input_var, target_var, net):
     loss = lasagne.objectives.aggregate(loss)
 
     params = layers.get_all_params(net['out'], trainable=True)
-    #updates = lasagne.updates.rmsprop(loss, params, learning_rate=1e-5)
     updates = lasagne.updates.adam(loss, params, learning_rate=1e-5)
 
     test_prediction = layers.get_output(net['out'], deterministic=True)
@@ -95,7 +94,7 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, osr=1, usp=0,
 
         input_var = T.tensor4('inputs')
         target_var = T.ivector('targets')
-        net = nw.simple2(input_var)
+        net = nw.simple(input_var)
         train_fn, val_fn, prob_fn = compile_model(input_var, target_var, net)
 
         train_err_list = [0] * num_epochs
@@ -140,7 +139,7 @@ def main(subject='chb05', num_epochs=10, thresh=0.5, osr=1, usp=0,
         test_err, y_pred, y_prob = nn_test(x_test, y_test, val_fn, prob_fn, batch_size, thresh)
         out_dict['_'.join(['prob', str(szr)])] = y_prob
         out_dict['_'.join(['true', str(szr)])] = y_test
-        #np.savez(''.join(['./outputs/',subject,'model','LOO',str(szr),tag,'.npz']), *lasagne.layers.get_all_param_values(net['out']))
+        np.savez(''.join(['./outputs/',subject,'model','LOO',str(szr),tag,'.npz']), *lasagne.layers.get_all_param_values(net['out']))
 
 
     np.savez(''.join([subject, tag, '.npz']), **out_dict)
