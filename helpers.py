@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys, os
 import scipy.io as sio
+from sklearn.metrics import matthews_corrcoef, confusion_matrix
+
 
 def plotprob(npz, thresh=0.8):
     for num in range(int(len(npz.files)/2)):
@@ -56,9 +58,30 @@ def to_s(hz):
 
 def metrics(npz, thresh=0.8):
     npzlen = int(len(npz.files)/2)
-    for i in range(1, npzlen + 1):
-        pred = (npz['_'.join(['prob', str(i)])] > thresh).astype('int32')
-        mcc = matthews_corrcoef(npz['_'.join(['true', str(i)])], pred)
-        cm = confusion_matrix(npz['_'.join(['true', str(i)])], pred)
-        print('Matthews Correlation Coefficient: \t{}'.format(mcc))
-        print('Confusion matrix:\n{}'.format(cm))
+    mcclist = [0]*npzlen
+    cmlist = []
+    for i in range(npzlen):
+        pred = (npz['_'.join(['prob',str(i + 1)])]>thresh).astype('int32')
+        true = npz['_'.join(['true',str(i + 1)])]
+        mcclist[i] = matthews_corrcoef(true, pred)
+        cmlist.append(confusion_matrix(true, pred))
+    return cmlist, mcclist
+
+def npzparse(npz, thresh=0.8):
+    npzlen = int(len(npz.files)/2)
+    probs, preds, trues = [], [], []
+    for i in range(npzlen):
+        prob = npz['_'.join(['prob',str(i + 1)])]
+        probs.append(prob)
+        preds.append((prob > thresh).astype('int32'))
+        trues.append(npz['_'.join(['true',str(i + 1)])].astype('int32'))
+    return probs, preds, trues
+
+def supermetrics(preds, trues):
+    N = len(trues)
+    mcclist = [0]*N
+    cmlist = []
+    for i in range(N):
+        mcclist[i] = matthews_corrcoef(trues[i], preds[i])
+        cmlist.append(confusion_matrix(trues[i], preds[i]))
+    return cmlist, mcclist
